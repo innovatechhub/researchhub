@@ -1,70 +1,78 @@
-# Getting Started with Create React App
+# Research Repository System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Role-based web application for student submissions, teacher review workflows, and researcher access to approved research outputs.
 
-## Available Scripts
+## Stack
 
-In the project directory, you can run:
+- Frontend: React + Vite, Tailwind CSS, React Router, Axios
+- Backend: Supabase (PostgreSQL, Auth, Storage)
+- Deployment: Vercel
 
-### `npm start`
+## Core Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Sign in and role-based dashboard redirect (`student`, `teacher`, `admin`, `researcher`)
+- Student submission with metadata: `title`, `abstract`, `authors`, `keywords`, `strand`, `category`, `year`, PDF file
+- Teacher review queue with actions: comment, suggest edits, approve, reject
+- Automatic notifications:
+  - Teachers are notified for new `pending` submissions
+  - Students are notified after review status updates
+- Researcher portal to browse/search/download approved research only
+- Admin portal for:
+  - user account role management
+  - research category / strand / track management
+  - dashboard metrics (`total users`, `total submissions`, `pending approvals`, `approved research`)
+  - rejected-record cleanup and JSON backup export
+- Shared UI feedback layer with global toast notifications for success, error, warning, and info events
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Architecture
 
-### `npm test`
+The frontend follows a clean modular structure:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- `src/app`: app shell, routing, providers
+- `src/application`: use-cases
+- `src/domain`: entities
+- `src/infrastructure`: Supabase/Axios clients and repositories
+- `src/presentation`: layouts, routes, pages, and UI components
+- `src/core`: shared config/constants/utilities
 
-### `npm run build`
+## Local Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+3. Fill `.env` values:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_SUPABASE_STORAGE_BUCKET` (default: `research-files`)
+4. In Supabase SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql).
+5. Start dev server:
+   ```bash
+   npm run dev
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Supabase Notes
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Schema includes:
+  - `profiles`
+  - `researches`
+  - `research_comments`
+  - `notifications`
+  - `research_categories`
+  - `strands`
+  - `tracks`
+- RLS policies are included for student, teacher, admin, and researcher scopes.
+- Storage bucket `research-files` is configured for PDF files and role-aware access control.
+- Triggers auto-create notifications for teacher submission alerts and student review updates.
 
-### `npm run eject`
+## Vercel Deployment
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. Import the project into Vercel.
+2. Set build command: `npm run build`.
+3. Set output directory: `dist`.
+4. Add environment variables from `.env.example` to Vercel project settings.
+5. Deploy.
