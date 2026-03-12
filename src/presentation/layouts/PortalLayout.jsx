@@ -1,13 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../core/constants/routes';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { useToast } from '../../app/providers/ToastProvider';
+import {
+  listNotificationsUseCase,
+  markNotificationAsReadUseCase
+} from '../../application/usecases/notificationUseCases';
+import { formatDate } from '../../core/utils/date';
 
 function SearchIcon({ className = '' }) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
       <path d="m21 21-4.35-4.35" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
       <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function BellIcon({ className = '' }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M15 17H9m9-1V11a6 6 0 1 0-12 0v5l-1.5 2h15L18 16Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path d="M10.5 18a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -79,7 +100,7 @@ function mapIconType(item) {
     return 'upload';
   }
 
-  if (value.includes('review')) {
+  if (value.includes('review') || value.includes('approval')) {
     return 'review';
   }
 
@@ -114,11 +135,17 @@ function includesQuery(text, query) {
 }
 
 export function PortalLayout({ portalLabel, navItems = [] }) {
-  const { user, signOut } = useAuth();
+  const { user, session, hasSupabaseConfig, signOut } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchText, setSearchText] = useState('');
   const [expandedMenus, setExpandedMenus] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [notificationLoadingId, setNotificationLoadingId] = useState('');
+  const notificationPanelRef = useRef(null);
 
   const visibleItems = useMemo(() => {
     const query = searchText.trim().toLowerCase();
@@ -152,6 +179,57 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
   }, [navItems, searchText]);
 
   const mobileItems = useMemo(() => flattenNavItems(navItems), [navItems]);
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.is_read).length,
+    [notifications]
+  );
+
+  const loadNotifications = useCallback(async () => {
+    if (!hasSupabaseConfig || !user?.id || !session?.access_token) {
+      setNotifications([]);
+      return;
+    }
+
+    setLoadingNotifications(true);
+    try {
+      const data = await listNotificationsUseCase({
+        accessToken: session.access_token,
+        userId: user.id
+      });
+      setNotifications(data);
+    } catch (error) {
+      toast.error(error.message || 'Unable to load notifications.');
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [hasSupabaseConfig, session?.access_token, toast, user?.id]);
+
+  const handleMarkNotificationRead = useCallback(
+    async (notificationId) => {
+      if (!hasSupabaseConfig || !session?.access_token) {
+        return;
+      }
+
+      setNotificationLoadingId(notificationId);
+      try {
+        await markNotificationAsReadUseCase({
+          accessToken: session.access_token,
+          notificationId
+        });
+
+        setNotifications((current) =>
+          current.map((entry) =>
+            entry.id === notificationId ? { ...entry, is_read: true } : entry
+          )
+        );
+      } catch (error) {
+        toast.error(error.message || 'Unable to update notification.');
+      } finally {
+        setNotificationLoadingId('');
+      }
+    },
+    [hasSupabaseConfig, session?.access_token, toast]
+  );
 
   useEffect(() => {
     setExpandedMenus((current) => {
@@ -172,6 +250,42 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
       return next;
     });
   }, [location.pathname, navItems]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig || !user?.id || !session?.access_token) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadNotifications();
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [hasSupabaseConfig, loadNotifications, session?.access_token, user?.id]);
+
+  useEffect(() => {
+    setNotificationPanelOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!notificationPanelRef.current?.contains(event.target)) {
+        setNotificationPanelOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -326,29 +440,98 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
       </aside>
 
       <div className="flex min-h-screen flex-col md:h-screen md:overflow-y-auto">
-        <header className="border-b border-slate-800 bg-slate-900 px-4 py-4 text-white md:hidden">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Research Repository</p>
-              <p className="text-xs text-slate-400">{portalLabel}</p>
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-end gap-3 px-4 sm:px-6">
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={notificationPanelRef}>
+                <button
+                  type="button"
+                  className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50"
+                  aria-label="Open notifications"
+                  onClick={() => setNotificationPanelOpen((current) => !current)}
+                >
+                  <BellIcon className="h-5 w-5" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  ) : null}
+                </button>
+
+                {notificationPanelOpen ? (
+                  <div className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                        onClick={() => {
+                          void loadNotifications();
+                        }}
+                      >
+                        Refresh
+                      </button>
+                    </div>
+
+                    <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                      {loadingNotifications ? (
+                        <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                          Loading notifications...
+                        </p>
+                      ) : notifications.length === 0 ? (
+                        <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                          No notifications yet.
+                        </p>
+                      ) : (
+                        notifications.slice(0, 8).map((notification) => (
+                          <article
+                            className={[
+                              'rounded-lg border p-3',
+                              notification.is_read
+                                ? 'border-slate-200 bg-white'
+                                : 'border-brand-200 bg-brand-50/50'
+                            ].join(' ')}
+                            key={notification.id}
+                          >
+                            <p className="text-sm text-slate-800">{notification.message}</p>
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <span className="text-xs text-slate-500">
+                                {formatDate(notification.created_at)}
+                              </span>
+                              {!notification.is_read ? (
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-brand-300 bg-white px-2 py-1 text-[11px] font-semibold text-brand-700 transition hover:bg-brand-100"
+                                  disabled={notificationLoadingId === notification.id}
+                                  onClick={() => {
+                                    void handleMarkNotificationRead(notification.id);
+                                  }}
+                                >
+                                  {notificationLoadingId === notification.id ? 'Updating...' : 'Mark read'}
+                                </button>
+                              ) : null}
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
             </div>
-            <button
-              type="button"
-              className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-slate-800"
-              onClick={handleSignOut}
-            >
-              Sign out
-            </button>
           </div>
 
           {mobileItems.length > 0 ? (
-            <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <nav className="mx-auto flex w-full max-w-6xl gap-2 overflow-x-auto border-t border-slate-200 px-4 py-2 sm:px-6 md:hidden">
               {mobileItems.map((item) => (
                 <NavLink
                   className={({ isActive }) =>
                     [
                       'flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                      isActive ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                      isActive
+                        ? 'bg-indigo-600 text-white'
+                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
                     ].join(' ')
                   }
                   key={item.to}

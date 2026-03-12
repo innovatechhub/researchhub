@@ -8,6 +8,7 @@ import { LoginPage } from '../presentation/pages/LoginPage';
 import { DashboardPage as StudentDashboardPage } from '../presentation/pages/student/DashboardPage';
 import { SubmitResearchPage } from '../presentation/pages/student/SubmitResearchPage';
 import { TeacherDashboardPage } from '../presentation/pages/teacher/DashboardPage';
+import { TeacherApprovalPage } from '../presentation/pages/teacher/Approval';
 import { AdminDashboardPage } from '../presentation/pages/admin/DashboardPage';
 import { AdminResearchPage } from '../presentation/pages/admin/Research';
 import { UserManagementPage } from '../presentation/pages/admin/UserManagement';
@@ -49,6 +50,7 @@ export function AppRouter() {
         <Route element={<StudentLayout />}>
           <Route path={ROUTES.studentDashboard} element={<StudentDashboardPage />} />
           <Route path={ROUTES.studentSubmit} element={<SubmitResearchPage />} />
+          <Route path={ROUTES.studentLibrary} element={<ResearcherDashboardPage />} />
         </Route>
       </Route>
 
@@ -57,11 +59,17 @@ export function AppRouter() {
           element={
             <RoleLayout
               portalLabel="Teacher Portal"
-              navItems={[{ to: ROUTES.teacherDashboard, label: 'Review Queue' }]}
+              navItems={[
+                { to: ROUTES.teacherDashboard, label: 'Dashboard' },
+                { to: ROUTES.teacherApproval, label: 'Approval' },
+                { to: ROUTES.teacherLibrary, label: 'Library' }
+              ]}
             />
           }
         >
           <Route path={ROUTES.teacherDashboard} element={<TeacherDashboardPage />} />
+          <Route path={ROUTES.teacherApproval} element={<TeacherApprovalPage />} />
+          <Route path={ROUTES.teacherLibrary} element={<ResearcherDashboardPage />} />
         </Route>
       </Route>
 
@@ -80,7 +88,8 @@ export function AppRouter() {
                     { to: ROUTES.adminStrands, label: 'Strand' },
                     { to: ROUTES.adminCategories, label: 'Category' }
                   ]
-                }
+                },
+                { to: ROUTES.adminLibrary, label: 'Library' }
               ]}
             />
           }
@@ -90,6 +99,7 @@ export function AppRouter() {
           <Route path={ROUTES.adminUserManagement} element={<UserManagementPage />} />
           <Route path={ROUTES.adminStrands} element={<StrandPage />} />
           <Route path={ROUTES.adminCategories} element={<CategoryPage />} />
+          <Route path={ROUTES.adminLibrary} element={<ResearcherDashboardPage />} />
         </Route>
       </Route>
 

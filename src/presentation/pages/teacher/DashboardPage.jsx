@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { useToast } from '../../../app/providers/ToastProvider';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { ResearchAnalyticsPanel } from '../../components/analytics/ResearchAnalyticsPanel';
 import { formatDate } from '../../../core/utils/date';
 import {
   getResearchFileDownloadUrlUseCase,
+  listAllResearchesUseCase,
   listTeacherResearchQueueUseCase,
   reviewResearchUseCase
 } from '../../../application/usecases/researchUseCases';
@@ -20,21 +22,28 @@ export function TeacherDashboardPage() {
   const { user, hasSupabaseConfig } = useAuth();
   const toast = useToast();
   const [queue, setQueue] = useState([]);
+  const [allResearches, setAllResearches] = useState([]);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
   const [fileLoadingId, setFileLoadingId] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState('');
 
-  const loadQueue = useCallback(
+  const loadDashboardData = useCallback(
     async () => {
       if (!hasSupabaseConfig || !user) {
+        setQueue([]);
+        setAllResearches([]);
         setLoading(false);
         return;
       }
 
       try {
-        const records = await listTeacherResearchQueueUseCase();
-        setQueue(records);
+        const [queueRecords, allRecords] = await Promise.all([
+          listTeacherResearchQueueUseCase(),
+          listAllResearchesUseCase()
+        ]);
+        setQueue(queueRecords);
+        setAllResearches(allRecords);
       } catch (error) {
         toast.error(error.message || 'Unable to load teacher review queue.');
       } finally {
@@ -45,8 +54,18 @@ export function TeacherDashboardPage() {
   );
 
   useEffect(() => {
-    loadQueue();
-  }, [loadQueue]);
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const summaryCounts = useMemo(() => {
+    const pending = allResearches.filter((research) => research.status === 'pending').length;
+    const approved = allResearches.filter((research) => research.status === 'approved').length;
+    const published = allResearches.filter(
+      (research) => research.status === 'approved' && Boolean(research.filePath)
+    ).length;
+
+    return { pending, approved, published };
+  }, [allResearches]);
 
   const handleDraftChange = (researchId, field, value) => {
     setDrafts((current) => ({
@@ -96,7 +115,7 @@ export function TeacherDashboardPage() {
           : 'Comment/suggestion submitted successfully.'
       );
 
-      await loadQueue();
+      await loadDashboardData();
     } catch (error) {
       toast.error(error.message || 'Unable to submit review action.');
     } finally {
@@ -121,6 +140,33 @@ export function TeacherDashboardPage() {
           Add comments and suggestions, then approve, reject, or request edits.
         </p>
       </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <article className="rounded-2xl bg-white p-5 shadow-card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Pending</p>
+          <p className="mt-2 text-3xl font-bold text-amber-600">{summaryCounts.pending}</p>
+          <p className="mt-1 text-sm text-slate-500">Waiting for review.</p>
+        </article>
+
+        <article className="rounded-2xl bg-white p-5 shadow-card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Approved</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-600">{summaryCounts.approved}</p>
+          <p className="mt-1 text-sm text-slate-500">Accepted by reviewers.</p>
+        </article>
+
+        <article className="rounded-2xl bg-white p-5 shadow-card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Published</p>
+          <p className="mt-2 text-3xl font-bold text-brand-700">{summaryCounts.published}</p>
+          <p className="mt-1 text-sm text-slate-500">Approved with uploaded file.</p>
+        </article>
+      </section>
+
+      <ResearchAnalyticsPanel
+        records={allResearches}
+        title="Submission Analytics"
+        subtitle="Identify which year and strand have the most uploaded research."
+        focusLabel="uploads"
+      />
 
       {queue.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">

@@ -491,6 +491,8 @@ grant execute on function public.admin_update_user_password(uuid, text) to authe
 create or replace function public.notify_teachers_after_submission()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   insert into public.notifications (user_id, research_id, message)
@@ -514,6 +516,8 @@ execute function public.notify_teachers_after_submission();
 create or replace function public.notify_student_after_review()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   if new.status is distinct from old.status
@@ -584,6 +588,16 @@ on public.researches
 for select
 to authenticated
 using (auth.uid() = student_id);
+
+drop policy if exists "Students read approved researches archive" on public.researches;
+create policy "Students read approved researches archive"
+on public.researches
+for select
+to authenticated
+using (
+  status = 'approved'
+  and public.current_user_role() = 'student'
+);
 
 drop policy if exists "Students insert own researches" on public.researches;
 create policy "Students insert own researches"
@@ -835,6 +849,22 @@ to authenticated
 using (
   bucket_id = 'research-files'
   and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Students read approved research files archive" on storage.objects;
+create policy "Students read approved research files archive"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'research-files'
+  and public.current_user_role() = 'student'
+  and exists (
+    select 1
+    from public.researches r
+    where r.file_path = name
+      and r.status = 'approved'
+  )
 );
 
 drop policy if exists "Teachers and admins read research files" on storage.objects;
