@@ -15,6 +15,7 @@ import { UserManagementPage } from '../presentation/pages/admin/UserManagement';
 import { StrandPage } from '../presentation/pages/admin/Strand';
 import { CategoryPage } from '../presentation/pages/admin/Category';
 import { ResearcherDashboardPage } from '../presentation/pages/researcher/DashboardPage';
+import { ResearcherOverviewPage } from '../presentation/pages/researcher/OverviewPage';
 import { ProtectedRoute } from '../presentation/routes/ProtectedRoute';
 import { LoadingSpinner } from '../presentation/components/common/LoadingSpinner';
 
@@ -108,11 +109,15 @@ export function AppRouter() {
           element={
             <RoleLayout
               portalLabel="Researcher Portal"
-              navItems={[{ to: ROUTES.researcherDashboard, label: 'Research Library' }]}
+              navItems={[
+                { to: ROUTES.researcherDashboard, label: 'Dashboard' },
+                { to: ROUTES.researcherLibrary, label: 'Library' }
+              ]}
             />
           }
         >
-          <Route path={ROUTES.researcherDashboard} element={<ResearcherDashboardPage />} />
+          <Route path={ROUTES.researcherDashboard} element={<ResearcherOverviewPage />} />
+          <Route path={ROUTES.researcherLibrary} element={<ResearcherDashboardPage />} />
         </Route>
       </Route>
 

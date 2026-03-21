@@ -24,11 +24,11 @@ export function AdminResearchPage() {
   const toast = useToast();
   const [researches, setResearches] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [yearFilter, setYearFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [strandFilter, setStrandFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [fileLoadingId, setFileLoadingId] = useState('');
+  const [selectedResearch, setSelectedResearch] = useState(null);
 
   const loadResearches = useCallback(
     async () => {
@@ -54,14 +54,10 @@ export function AdminResearchPage() {
   }, [loadResearches]);
 
   const filterOptions = useMemo(() => {
-    const years = new Set();
     const categories = new Set();
     const strands = new Set();
 
     researches.forEach((research) => {
-      if (research.year) {
-        years.add(String(research.year));
-      }
       if (research.category) {
         categories.add(research.category);
       }
@@ -71,7 +67,6 @@ export function AdminResearchPage() {
     });
 
     return {
-      years: Array.from(years).sort((a, b) => Number(b) - Number(a)),
       categories: Array.from(categories).sort((a, b) => a.localeCompare(b)),
       strands: Array.from(strands).sort((a, b) => a.localeCompare(b))
     };
@@ -92,10 +87,6 @@ export function AdminResearchPage() {
         }
       }
 
-      if (yearFilter !== 'all' && String(research.year ?? '') !== yearFilter) {
-        return false;
-      }
-
       if (categoryFilter !== 'all' && normalizeText(research.category) !== normalizeText(categoryFilter)) {
         return false;
       }
@@ -106,14 +97,7 @@ export function AdminResearchPage() {
 
       return true;
     });
-  }, [categoryFilter, researches, searchText, strandFilter, yearFilter]);
-
-  const handleResetFilters = () => {
-    setSearchText('');
-    setYearFilter('all');
-    setCategoryFilter('all');
-    setStrandFilter('all');
-  };
+  }, [categoryFilter, researches, searchText, strandFilter]);
 
   const handleOpenFile = async (research) => {
     try {
@@ -127,6 +111,14 @@ export function AdminResearchPage() {
     }
   };
 
+  const handleViewResearch = (research) => {
+    setSelectedResearch(research);
+  };
+
+  const handleCloseResearchDetails = () => {
+    setSelectedResearch(null);
+  };
+
   if (loading) {
     return (
       <div className="rounded-2xl bg-white p-6 shadow-card">
@@ -136,9 +128,10 @@ export function AdminResearchPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl bg-white p-4 shadow-card">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+    <div>
+      <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+        <div className="p-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-2 md:col-span-2 xl:col-span-2" htmlFor="admin-research-search">
             <span className="text-sm font-medium text-slate-700">Search</span>
             <input
@@ -149,23 +142,6 @@ export function AdminResearchPage() {
               placeholder="Title, abstract, author, or keyword"
               className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
             />
-          </label>
-
-          <label className="space-y-2" htmlFor="admin-research-year-filter">
-            <span className="text-sm font-medium text-slate-700">Year</span>
-            <select
-              id="admin-research-year-filter"
-              value={yearFilter}
-              onChange={(event) => setYearFilter(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
-            >
-              <option value="all">All years</option>
-              {filterOptions.years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
           </label>
 
           <label className="space-y-2" htmlFor="admin-research-category-filter">
@@ -201,24 +177,8 @@ export function AdminResearchPage() {
               ))}
             </select>
           </label>
+          </div>
         </div>
-
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            onClick={handleResetFilters}
-          >
-            Reset filters
-          </button>
-        </div>
-      </section>
-
-      <p className="text-sm text-slate-600">
-        Showing {filteredResearches.length} of {researches.length} research submissions.
-      </p>
-
-      <section className="overflow-hidden rounded-2xl bg-white shadow-card">
         <div className="overflow-x-auto">
           <table className="min-w-[980px] w-full border-collapse text-left">
             <thead className="bg-slate-50">
@@ -266,10 +226,9 @@ export function AdminResearchPage() {
                       <button
                         type="button"
                         className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={fileLoadingId === research.id || !research.filePath}
-                        onClick={() => handleOpenFile(research)}
+                        onClick={() => handleViewResearch(research)}
                       >
-                        {fileLoadingId === research.id ? 'Preparing...' : 'Open file'}
+                        View
                       </button>
                     </td>
                   </tr>
@@ -279,6 +238,115 @@ export function AdminResearchPage() {
           </table>
         </div>
       </section>
+
+      {selectedResearch ? (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 px-4 py-6 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:py-8"
+          onClick={handleCloseResearchDetails}
+        >
+          <div
+            className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-research-details-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
+              <div className="space-y-2">
+                <h3 className="text-base font-semibold text-slate-900 sm:text-lg" id="admin-research-details-title">
+                  {selectedResearch.title}
+                </h3>
+                <p className="text-xs text-slate-500">Submitted on {formatDate(selectedResearch.submittedAt)}</p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close details modal"
+                onClick={handleCloseResearchDetails}
+              >
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-[calc(100vh-11rem)] space-y-5 overflow-y-auto px-5 py-4 sm:max-h-[calc(100vh-10rem)] sm:px-6 sm:py-5">
+              <span
+                className={[
+                  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                  STATUS_STYLES[selectedResearch.status] || 'bg-slate-100 text-slate-700'
+                ].join(' ')}
+              >
+                {selectedResearch.status.replace('_', ' ')}
+              </span>
+
+              <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Abstract</p>
+                <p className="mt-2 text-sm leading-7 text-slate-700">
+                  {selectedResearch.abstract || 'No abstract provided.'}
+                </p>
+              </section>
+
+              <section className="grid gap-3 sm:grid-cols-2">
+                <article className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Authors</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">
+                    {selectedResearch.authors.length > 0 ? selectedResearch.authors.join(', ') : 'N/A'}
+                  </p>
+                </article>
+                <article className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Year</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedResearch.year ?? 'N/A'}</p>
+                </article>
+                <article className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Category</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedResearch.category || 'N/A'}</p>
+                </article>
+                <article className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Strand</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedResearch.strand || 'N/A'}</p>
+                </article>
+              </section>
+
+              {selectedResearch.keywords.length > 0 ? (
+                <section className="space-y-2">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Keywords</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedResearch.keywords.map((keyword) => (
+                      <span
+                        className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                        key={`${selectedResearch.id}-${keyword}`}
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3 sm:px-6">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={fileLoadingId === selectedResearch.id || !selectedResearch.filePath}
+                onClick={() => {
+                  void handleOpenFile(selectedResearch);
+                }}
+              >
+                {fileLoadingId === selectedResearch.id ? 'Preparing file...' : 'Open file'}
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                onClick={handleCloseResearchDetails}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

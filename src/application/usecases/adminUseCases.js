@@ -20,7 +20,7 @@ import {
 import { normalizeRole } from '../../core/constants/roles';
 
 const MANAGEABLE_ROLES = ['student', 'teacher', 'admin', 'researcher'];
-const CREATABLE_ROLES = ['student', 'teacher', 'admin'];
+const CREATABLE_ROLES = ['student', 'teacher', 'admin', 'researcher'];
 
 function requireName(name, entityLabel) {
   const normalized = name?.trim() ?? '';

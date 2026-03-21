@@ -91,7 +91,7 @@ export function StrandPage() {
 
   return (
     <section className="rounded-2xl bg-white p-5 shadow-card" id="admin-strands">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <h2 className="text-lg font-semibold text-slate-900">Strand Management</h2>
         <button
           type="button"
@@ -104,41 +104,43 @@ export function StrandPage() {
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-        <table className="min-w-[640px] w-full border-collapse text-left">
-          <thead className="bg-slate-50">
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">Strand</th>
-              <th className="px-4 py-3 font-semibold">Created At</th>
-              <th className="px-4 py-3 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {strands.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
-                  No strands found.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[640px] w-full border-collapse text-left">
+            <thead className="bg-slate-50">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 font-semibold">Strand</th>
+                <th className="px-4 py-3 font-semibold">Created At</th>
+                <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
-            ) : (
-              strands.map((entry) => (
-                <tr className="border-b border-slate-100" key={entry.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-800">{entry.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.created_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={deletingStrandId === entry.id}
-                      onClick={() => handleDeleteStrand(entry.id, entry.name)}
-                    >
-                      {deletingStrandId === entry.id ? 'Deleting...' : 'Delete'}
-                    </button>
+            </thead>
+            <tbody>
+              {strands.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
+                    No strands found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                strands.map((entry) => (
+                  <tr className="border-b border-slate-100" key={entry.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{entry.name}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={deletingStrandId === entry.id}
+                        onClick={() => handleDeleteStrand(entry.id, entry.name)}
+                      >
+                        {deletingStrandId === entry.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isAddModalOpen ? (

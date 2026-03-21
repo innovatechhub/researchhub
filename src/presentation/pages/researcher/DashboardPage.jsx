@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { useToast } from '../../../app/providers/ToastProvider';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { ResearchAnalyticsPanel } from '../../components/analytics/ResearchAnalyticsPanel';
 import { formatDate } from '../../../core/utils/date';
 import {
   getApprovedResearchFileDownloadUrlUseCase,
@@ -38,6 +37,95 @@ function getDocumentFormatLabel(format) {
   }
 
   return 'Original File';
+}
+
+function sanitizeDownloadName(value) {
+  return String(value || 'research')
+    .replace(/[\\/:*?"<>|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function triggerBlobDownload({ blob, fileName }) {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+function getFileExtensionFromPath(filePath) {
+  const normalizedPath = String(filePath || '').toLowerCase();
+  const dotIndex = normalizedPath.lastIndexOf('.');
+  if (dotIndex === -1) {
+    return 'bin';
+  }
+
+  return normalizedPath.slice(dotIndex + 1) || 'bin';
+}
+
+async function fetchBlobFromSignedUrl(signedUrl) {
+  const response = await fetch(signedUrl);
+  if (!response.ok) {
+    throw new Error('Unable to fetch research file for download.');
+  }
+
+  return response.blob();
+}
+
+async function convertDocxBlobToPdfBlob(docxBlob) {
+  const [{ jsPDF }, mammoth] = await Promise.all([
+    import('jspdf'),
+    import('mammoth/mammoth.browser')
+  ]);
+
+  const arrayBuffer = await docxBlob.arrayBuffer();
+  const { value: rawText } = await mammoth.extractRawText({ arrayBuffer });
+  const normalizedText = String(rawText || '').replace(/\r\n/g, '\n').trim();
+
+  if (!normalizedText) {
+    throw new Error('No readable text found in the DOCX file.');
+  }
+
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'pt',
+    format: 'a4'
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 40;
+  const maxLineWidth = pageWidth - margin * 2;
+  const lineHeight = 16;
+
+  pdf.setFont('times', 'normal');
+  pdf.setFontSize(12);
+
+  let cursorY = margin;
+  const paragraphs = normalizedText.split('\n');
+
+  paragraphs.forEach((paragraph) => {
+    const text = paragraph.trim();
+    const lines = pdf.splitTextToSize(text || ' ', maxLineWidth);
+
+    lines.forEach((line) => {
+      if (cursorY > pageHeight - margin) {
+        pdf.addPage();
+        cursorY = margin;
+      }
+
+      pdf.text(line, margin, cursorY);
+      cursorY += lineHeight;
+    });
+
+    cursorY += 6;
+  });
+
+  return pdf.output('blob');
 }
 
 function SummaryCardIcon({ type }) {
@@ -80,14 +168,16 @@ function SummaryCardIcon({ type }) {
 }
 
 export function ResearcherDashboardPage() {
-  const { user, hasSupabaseConfig } = useAuth();
+  const { user, hasSupabaseConfig, role } = useAuth();
   const toast = useToast();
+  const canDownloadFiles = role !== 'researcher';
   const [researches, setResearches] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [strandFilter, setStrandFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [fileLoadingId, setFileLoadingId] = useState('');
+  const [exportingAll, setExportingAll] = useState(false);
   const [expandedResearchId, setExpandedResearchId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDownloadFormat, setSelectedDownloadFormat] = useState('pdf');
@@ -217,25 +307,89 @@ export function ResearcherDashboardPage() {
     setCurrentPage((current) => (current > totalPages ? totalPages : current));
   }, [totalPages]);
 
-  const handleResetFilters = () => {
-    setSearchText('');
-    setStrandFilter('all');
-    setCategoryFilter('all');
-  };
-
   const handleOpenFile = async (research) => {
+    if (!canDownloadFiles) {
+      toast.info('Researcher accounts can only browse and view details.');
+      return;
+    }
+
     try {
       setFileLoadingId(research.id);
       const signedUrl = await getApprovedResearchFileDownloadUrlUseCase({
         status: research.status,
         filePath: research.filePath
       });
-      window.open(signedUrl, '_blank', 'noopener,noreferrer');
-      toast.success('Download prepared.', { duration: 2000 });
+      const fileBlob = await fetchBlobFromSignedUrl(signedUrl);
+      const extension = getFileExtensionFromPath(research.filePath);
+      const fileName = `${sanitizeDownloadName(research.title || 'research')}.${extension}`;
+      triggerBlobDownload({ blob: fileBlob, fileName });
+      toast.success('Download started.', { duration: 2000 });
     } catch (error) {
       toast.error(error.message || 'Unable to download research file.');
     } finally {
       setFileLoadingId('');
+    }
+  };
+
+  const handleExportAllUploaded = async () => {
+    if (!canDownloadFiles) {
+      toast.info('Researcher accounts can only browse and view details.');
+      return;
+    }
+
+    const uploadedResearches = filteredResearches.filter((research) => !!research.filePath);
+    if (uploadedResearches.length === 0) {
+      toast.info('No uploaded research files available for export.');
+      return;
+    }
+
+    setExportingAll(true);
+    try {
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+      const duplicateNameCount = new Map();
+      let exportedCount = 0;
+      let failedCount = 0;
+
+      for (let index = 0; index < uploadedResearches.length; index += 1) {
+        const research = uploadedResearches[index];
+        try {
+          const signedUrl = await getApprovedResearchFileDownloadUrlUseCase({
+            status: research.status,
+            filePath: research.filePath
+          });
+          const fileBlob = await fetchBlobFromSignedUrl(signedUrl);
+          const extension = getFileExtensionFromPath(research.filePath);
+          const baseName = sanitizeDownloadName(research.title || `research-${index + 1}`);
+          const fileKey = `${baseName}.${extension}`;
+          const duplicateCount = duplicateNameCount.get(fileKey) ?? 0;
+          duplicateNameCount.set(fileKey, duplicateCount + 1);
+          const zipFileName =
+            duplicateCount === 0 ? fileKey : `${baseName} (${duplicateCount + 1}).${extension}`;
+
+          zip.file(zipFileName, fileBlob);
+          exportedCount += 1;
+        } catch (error) {
+          failedCount += 1;
+        }
+      }
+
+      if (exportedCount === 0) {
+        throw new Error('Unable to export any uploaded files.');
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      triggerBlobDownload({ blob: zipBlob, fileName: 'ResearchHub.zip' });
+
+      if (failedCount > 0) {
+        toast.info(`Exported ${exportedCount} file(s). ${failedCount} file(s) were skipped.`);
+      } else {
+        toast.success(`Exported ${exportedCount} file(s) to ResearchHub.zip.`);
+      }
+    } catch (error) {
+      toast.error(error.message || 'Unable to export uploaded files.');
+    } finally {
+      setExportingAll(false);
     }
   };
 
@@ -244,18 +398,53 @@ export function ResearcherDashboardPage() {
   };
 
   const handleContinueDownload = async () => {
+    if (!canDownloadFiles) {
+      toast.info('Researcher accounts can only browse and view details.');
+      return;
+    }
+
     if (!expandedResearch) {
       return;
     }
 
     const actualFormat = getDocumentFormatFromPath(expandedResearch.filePath);
 
-    if (actualFormat !== 'unknown' && selectedDownloadFormat !== actualFormat) {
-      toast.info(
-        `PDF/Word conversion is not available yet. Downloading original ${getDocumentFormatLabel(actualFormat)}.`
-      );
+    if (selectedDownloadFormat === actualFormat || actualFormat === 'unknown') {
+      await handleOpenFile(expandedResearch);
+      return;
     }
 
+    if (selectedDownloadFormat === 'pdf' && actualFormat === 'word') {
+      const normalizedPath = String(expandedResearch.filePath || '').toLowerCase();
+      if (!normalizedPath.endsWith('.docx')) {
+        toast.info('DOC to PDF conversion is not supported yet. Downloading original Word file.');
+        await handleOpenFile(expandedResearch);
+        return;
+      }
+
+      try {
+        setFileLoadingId(expandedResearch.id);
+        const signedUrl = await getApprovedResearchFileDownloadUrlUseCase({
+          status: expandedResearch.status,
+          filePath: expandedResearch.filePath
+        });
+        const wordBlob = await fetchBlobFromSignedUrl(signedUrl);
+        const pdfBlob = await convertDocxBlobToPdfBlob(wordBlob);
+        const fileName = `${sanitizeDownloadName(expandedResearch.title || 'research')}.pdf`;
+        triggerBlobDownload({ blob: pdfBlob, fileName });
+        toast.success('Word file converted to PDF and downloaded.', { duration: 2500 });
+      } catch (error) {
+        toast.error(error.message || 'Unable to convert Word file to PDF.');
+      } finally {
+        setFileLoadingId('');
+      }
+
+      return;
+    }
+
+    toast.info(
+      `Conversion from ${getDocumentFormatLabel(actualFormat)} to ${getDocumentFormatLabel(selectedDownloadFormat)} is not supported yet. Downloading original file.`
+    );
     await handleOpenFile(expandedResearch);
   };
 
@@ -273,7 +462,9 @@ export function ResearcherDashboardPage() {
         <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Research Library</p>
         <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Published Research Archive</h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-300">
-          Explore approved studies with publication metadata, abstract previews, and downloadable manuscripts.
+          {canDownloadFiles
+            ? 'Explore approved studies with publication metadata, abstract previews, and downloadable manuscripts.'
+            : 'Explore approved studies with publication metadata and abstract previews.'}
         </p>
       </section>
 
@@ -323,16 +514,14 @@ export function ResearcherDashboardPage() {
         </article>
       </section>
 
-      <ResearchAnalyticsPanel
-        records={researches}
-        title="Published Research Analytics"
-        subtitle="Track which year and strand have the most published research."
-        focusLabel="published research"
-      />
-
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-200 bg-slate-50/40 px-4 py-4">
-          <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr_1fr_auto]">
+          <div
+            className={[
+              'grid gap-3',
+              canDownloadFiles ? 'lg:grid-cols-[1.6fr_1fr_1fr_auto]' : 'lg:grid-cols-[1.6fr_1fr_1fr]'
+            ].join(' ')}
+          >
             <label className="space-y-1" htmlFor="research-search">
               <span className="text-xs font-medium text-slate-700">Search query</span>
               <input
@@ -379,15 +568,20 @@ export function ResearcherDashboardPage() {
               </select>
             </label>
 
-            <div className="flex items-end">
-              <button
-                type="button"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 lg:w-auto"
-                onClick={handleResetFilters}
-              >
-                Reset
-              </button>
-            </div>
+            {canDownloadFiles ? (
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  className="w-full rounded-lg bg-brand-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60 lg:w-auto"
+                  disabled={exportingAll}
+                  onClick={() => {
+                    void handleExportAllUploaded();
+                  }}
+                >
+                  {exportingAll ? 'Exporting...' : 'Export'}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -583,38 +777,40 @@ export function ResearcherDashboardPage() {
                 </section>
               ) : null}
 
-              <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Download Options</p>
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <label className="space-y-1" htmlFor="research-save-as">
-                    <span className="text-xs text-slate-600">Save as</span>
-                    <select
-                      id="research-save-as"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100 sm:w-[220px]"
-                      value={selectedDownloadFormat}
-                      onChange={(event) => setSelectedDownloadFormat(event.target.value)}
+              {canDownloadFiles ? (
+                <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Download Options</p>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <label className="space-y-1" htmlFor="research-save-as">
+                      <span className="text-xs text-slate-600">Save as</span>
+                      <select
+                        id="research-save-as"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100 sm:w-[220px]"
+                        value={selectedDownloadFormat}
+                        onChange={(event) => setSelectedDownloadFormat(event.target.value)}
+                      >
+                        <option value="pdf">PDF Document</option>
+                        <option value="word">Word Document</option>
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={fileLoadingId === expandedResearch.id}
+                      onClick={() => {
+                        void handleContinueDownload();
+                      }}
                     >
-                      <option value="pdf">PDF Document</option>
-                      <option value="word">Word Document</option>
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={fileLoadingId === expandedResearch.id}
-                    onClick={() => {
-                      void handleContinueDownload();
-                    }}
-                  >
-                    {fileLoadingId === expandedResearch.id
-                      ? 'Preparing file...'
-                      : `Save as ${selectedDownloadFormat === 'word' ? 'Word' : 'PDF'}`}
-                  </button>
-                </div>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Available file: {getDocumentFormatLabel(getDocumentFormatFromPath(expandedResearch.filePath))}
-                </p>
-              </section>
+                      {fileLoadingId === expandedResearch.id
+                        ? 'Preparing file...'
+                        : `Save as ${selectedDownloadFormat === 'word' ? 'Word' : 'PDF'}`}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    Available file: {getDocumentFormatLabel(getDocumentFormatFromPath(expandedResearch.filePath))}
+                  </p>
+                </section>
+              ) : null}
             </div>
 
             <div className="flex justify-end border-t border-slate-200 bg-white px-5 py-3 sm:px-6">

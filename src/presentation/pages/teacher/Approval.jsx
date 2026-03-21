@@ -156,57 +156,59 @@ export function TeacherApprovalPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200">
-        <table className="min-w-[720px] w-full border-collapse text-left">
-          <thead className="bg-slate-50">
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Authors</th>
-              <th className="px-4 py-3 font-semibold">Strand</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
-                  No records available for approval.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full border-collapse text-left">
+            <thead className="bg-slate-50">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 font-semibold">Category</th>
+                <th className="px-4 py-3 font-semibold">Authors</th>
+                <th className="px-4 py-3 font-semibold">Strand</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
-            ) : (
-              records.map((entry) => (
-                <tr
-                  className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50"
-                  key={entry.id}
-                  onClick={() => handleOpenModal(entry)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      handleOpenModal(entry);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <td className="px-4 py-3 text-sm text-slate-700">{entry.category || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">
-                    {entry.authors.length > 0 ? entry.authors.join(', ') : 'N/A'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{entry.strand || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={[
-                        'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize',
-                        STATUS_STYLES[entry.status] || 'bg-slate-100 text-slate-700'
-                      ].join(' ')}
-                    >
-                      {entry.status.replace('_', ' ')}
-                    </span>
+            </thead>
+            <tbody>
+              {records.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-4 text-sm text-slate-500" colSpan={4}>
+                    No records available for approval.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                records.map((entry) => (
+                  <tr
+                    className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50"
+                    key={entry.id}
+                    onClick={() => handleOpenModal(entry)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpenModal(entry);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <td className="px-4 py-3 text-sm text-slate-700">{entry.category || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {entry.authors.length > 0 ? entry.authors.join(', ') : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{entry.strand || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span
+                        className={[
+                          'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize',
+                          STATUS_STYLES[entry.status] || 'bg-slate-100 text-slate-700'
+                        ].join(' ')}
+                      >
+                        {entry.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedRecord ? (

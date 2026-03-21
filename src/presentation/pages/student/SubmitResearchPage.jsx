@@ -118,7 +118,7 @@ export function SubmitResearchPage() {
 
   return (
     <section className="space-y-4 rounded-2xl bg-white p-5 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Research</h2>
           <p className="text-sm text-slate-500">Manage and submit your research records.</p>
@@ -133,46 +133,48 @@ export function SubmitResearchPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200">
-        <table className="min-w-[720px] w-full border-collapse text-left">
-          <thead className="bg-slate-50">
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">Research Title</th>
-              <th className="px-4 py-3 font-semibold">Strand</th>
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Year</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Submitted At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {researches.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
-                  No research submissions yet.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full border-collapse text-left">
+            <thead className="bg-slate-50">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 font-semibold">Research Title</th>
+                <th className="px-4 py-3 font-semibold">Strand</th>
+                <th className="px-4 py-3 font-semibold">Category</th>
+                <th className="px-4 py-3 font-semibold">Year</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Submitted At</th>
               </tr>
-            ) : (
-              researches.map((research) => (
-                <tr className="border-b border-slate-100" key={research.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-800">{research.title}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{research.strand || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{research.category || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{research.year ?? 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-                        statusStyles[research.status] ?? 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {research.status.replace('_', ' ')}
-                    </span>
+            </thead>
+            <tbody>
+              {researches.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
+                    No research submissions yet.
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(research.submittedAt)}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                researches.map((research) => (
+                  <tr className="border-b border-slate-100" key={research.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{research.title}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{research.strand || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{research.category || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{research.year ?? 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                          statusStyles[research.status] ?? 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {research.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(research.submittedAt)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isAddModalOpen ? (

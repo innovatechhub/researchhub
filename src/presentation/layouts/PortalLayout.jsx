@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { IoIosNotificationsOutline } from 'react-icons/io';
 import { ROUTES } from '../../core/constants/routes';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
@@ -9,26 +10,10 @@ import {
 } from '../../application/usecases/notificationUseCases';
 import { formatDate } from '../../core/utils/date';
 
-function SearchIcon({ className = '' }) {
+function MenuIcon({ className = '' }) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-      <path d="m21 21-4.35-4.35" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function BellIcon({ className = '' }) {
-  return (
-    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-      <path
-        d="M15 17H9m9-1V11a6 6 0 1 0-12 0v5l-1.5 2h15L18 16Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-      <path d="M10.5 18a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -130,53 +115,20 @@ function flattenNavItems(items) {
   });
 }
 
-function includesQuery(text, query) {
-  return String(text || '').toLowerCase().includes(query);
-}
-
 export function PortalLayout({ portalLabel, navItems = [] }) {
   const { user, session, hasSupabaseConfig, signOut } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchText, setSearchText] = useState('');
   const [expandedMenus, setExpandedMenus] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [notificationLoadingId, setNotificationLoadingId] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const notificationPanelRef = useRef(null);
 
-  const visibleItems = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    if (!query) {
-      return navItems;
-    }
-
-    return navItems
-      .map((item) => {
-        if (!item.children?.length) {
-          return includesQuery(item.label, query) ? item : null;
-        }
-
-        const matchingChildren = item.children.filter(
-          (child) => includesQuery(child.label, query) || includesQuery(child.to, query)
-        );
-        if (includesQuery(item.label, query)) {
-          return item;
-        }
-
-        if (matchingChildren.length > 0) {
-          return {
-            ...item,
-            children: matchingChildren
-          };
-        }
-
-        return null;
-      })
-      .filter(Boolean);
-  }, [navItems, searchText]);
+  const visibleItems = navItems;
 
   const mobileItems = useMemo(() => flattenNavItems(navItems), [navItems]);
   const unreadCount = useMemo(
@@ -271,6 +223,7 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
 
   useEffect(() => {
     setNotificationPanelOpen(false);
+    setMobileMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -298,17 +251,6 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
         <div className="border-b border-slate-800 px-5 py-5">
           <p className="text-base font-semibold">Research Repository</p>
           <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">{portalLabel}</p>
-          <label className="relative mt-4 block" htmlFor="sidebar-search">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              id="sidebar-search"
-              type="text"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Search..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 pl-9 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-indigo-500"
-            />
-          </label>
         </div>
 
         <nav className="flex-1 space-y-2 px-4 py-4">
@@ -362,19 +304,15 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
                       : 'text-slate-200 hover:bg-slate-800 hover:text-white'
                   ].join(' ')}
                   onClick={() => {
-                    if (item.to) {
-                      navigate(item.to);
-                      setExpandedMenus((current) => ({
-                        ...current,
-                        [item.label]: true
-                      }));
-                      return;
-                    }
-
+                    const nextExpanded = !isExpanded;
                     setExpandedMenus((current) => ({
                       ...current,
-                      [item.label]: !isExpanded
+                      [item.label]: nextExpanded
                     }));
+
+                    if (item.to && nextExpanded) {
+                      navigate(item.to);
+                    }
                   }}
                 >
                   <span
@@ -439,18 +377,75 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
         </div>
       </aside>
 
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-40 bg-slate-900/60 md:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <div
+            className="h-full w-[80%] max-w-[320px] overflow-y-auto bg-slate-900 text-white"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-slate-800 px-4 py-4">
+              <p className="text-base font-semibold">Research Repository</p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">{portalLabel}</p>
+            </div>
+            <nav className="space-y-1 px-3 py-3">
+              {mobileItems.map((item) => (
+                <NavLink
+                  className={({ isActive }) =>
+                    [
+                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition',
+                      isActive
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                    ].join(' ')
+                  }
+                  key={item.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  to={item.to}
+                >
+                  <ItemIcon className="h-4 w-4" type={mapIconType(item)} />
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+            <div className="border-t border-slate-800 px-4 py-4">
+              <p className="truncate text-xs text-slate-400">{user?.email}</p>
+              <button
+                type="button"
+                className="mt-3 w-full rounded-lg border border-slate-600 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-800"
+                onClick={() => {
+                  void handleSignOut();
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex min-h-screen flex-col md:h-screen md:overflow-y-auto">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-end gap-3 px-4 sm:px-6">
-            <div className="flex items-center gap-2">
+          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50"
+                aria-label="Open navigation menu"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <MenuIcon className="h-5 w-5" />
+              </button>
+              <p className="text-sm font-semibold text-slate-800">{portalLabel}</p>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
               <div className="relative" ref={notificationPanelRef}>
                 <button
                   type="button"
-                  className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50"
+                  className="relative inline-flex h-10 w-10 items-center justify-center text-slate-700 transition hover:text-slate-900"
                   aria-label="Open notifications"
                   onClick={() => setNotificationPanelOpen((current) => !current)}
                 >
-                  <BellIcon className="h-5 w-5" />
+                  <IoIosNotificationsOutline className="h-6 w-6" />
                   {unreadCount > 0 ? (
                     <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
                       {unreadCount > 99 ? '99+' : unreadCount}

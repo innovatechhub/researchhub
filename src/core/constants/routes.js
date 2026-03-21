@@ -15,7 +15,8 @@ export const ROUTES = {
   adminStrands: '/admin/strands',
   adminCategories: '/admin/categories',
   adminLibrary: '/admin/library',
-  researcherDashboard: '/researcher/dashboard'
+  researcherDashboard: '/researcher/dashboard',
+  researcherLibrary: '/researcher/library'
 };
 
 export function getDashboardRouteByRole(role) {

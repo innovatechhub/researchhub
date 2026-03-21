@@ -22,7 +22,8 @@ const EDIT_ROLE_OPTIONS = [
 const CREATE_ROLE_OPTIONS = [
   { value: 'student', label: 'Student' },
   { value: 'teacher', label: 'Teacher' },
-  { value: 'admin', label: 'Admin' }
+  { value: 'admin', label: 'Admin' },
+  { value: 'researcher', label: 'Researcher' }
 ];
 
 const INITIAL_ADD_USER_FORM = {
@@ -403,7 +404,7 @@ export function UserManagementPage() {
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
           <p className="text-sm font-semibold text-slate-800">User Accounts</p>
           <p className="text-xs text-slate-500">
             {users.length} {users.length === 1 ? 'user' : 'users'}
@@ -531,7 +532,7 @@ export function UserManagementPage() {
             </tbody>
           </table>
         
-          <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-3">
             <p className="text-xs text-slate-500">
               Showing {visibleStart}-{visibleEnd} of {users.length}
             </p>

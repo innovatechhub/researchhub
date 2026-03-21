@@ -7,7 +7,7 @@ create extension if not exists "pgcrypto" with schema extensions;
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text,
-  role text not null default 'student' check (role in ('student', 'reviewer', 'admin')),
+  role text not null default 'student' check (role in ('student', 'teacher', 'reviewer', 'admin', 'researcher', 'public_researcher')),
   full_name text,
   track text,
   created_at timestamptz not null default timezone('utc', now())
@@ -306,11 +306,19 @@ begin
   v_full_name := nullif(trim(coalesce(p_full_name, '')), '');
   v_strand := nullif(trim(coalesce(p_strand, '')), '');
 
+  if v_role = 'reviewer' then
+    v_role := 'teacher';
+  end if;
+
+  if v_role = 'public_researcher' then
+    v_role := 'researcher';
+  end if;
+
   if v_email = '' then
     raise exception 'Email is required.';
   end if;
 
-  if v_role not in ('student', 'teacher', 'admin') then
+  if v_role not in ('student', 'teacher', 'admin', 'researcher') then
     raise exception 'Invalid role.';
   end if;
 
@@ -883,32 +891,13 @@ using (
 );
 
 drop policy if exists "Researchers read approved research files" on storage.objects;
-create policy "Researchers read approved research files"
-on storage.objects
-for select
-to authenticated
-using (
-  bucket_id = 'research-files'
-  and exists (
-    select 1
-    from public.profiles p
-    where p.id = auth.uid()
-      and p.role in ('researcher', 'public_researcher')
-  )
-  and exists (
-    select 1
-    from public.researches r
-    where r.file_path = name
-      and r.status = 'approved'
-  )
-);
 
 insert into public.roles (role_key, role_name, description)
 values
   ('student', 'Student', 'Student users who submit research and receive review feedback.'),
   ('teacher', 'Teacher / Reviewer', 'Teachers assigned to review research and decide outcomes.'),
   ('admin', 'Admin', 'System administrators who manage users, categories, and platform operations.'),
-  ('researcher', 'Researchers (Public Users)', 'Users who browse and download approved research outputs.')
+  ('researcher', 'Researchers (Public Users)', 'Users who browse and view approved research outputs.')
 on conflict (role_key) do update
 set
   role_name = excluded.role_name,
@@ -971,8 +960,7 @@ values
   ('researcher', 'login'),
   ('researcher', 'browse_approved_research'),
   ('researcher', 'search_research'),
-  ('researcher', 'view_research_details'),
-  ('researcher', 'download_approved_research')
+  ('researcher', 'view_research_details')
 on conflict (role_key, permission_key) do nothing;
 
 insert into public.research_categories (name)

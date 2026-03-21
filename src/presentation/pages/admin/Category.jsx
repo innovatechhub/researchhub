@@ -95,7 +95,7 @@ export function CategoryPage() {
 
   return (
     <section className="rounded-2xl bg-white p-5 shadow-card" id="admin-categories">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <h2 className="text-lg font-semibold text-slate-900">Category Management</h2>
         <button
           type="button"
@@ -108,41 +108,43 @@ export function CategoryPage() {
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-        <table className="min-w-[640px] w-full border-collapse text-left">
-          <thead className="bg-slate-50">
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Created At</th>
-              <th className="px-4 py-3 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
-                  No categories found.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[640px] w-full border-collapse text-left">
+            <thead className="bg-slate-50">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 font-semibold">Category</th>
+                <th className="px-4 py-3 font-semibold">Created At</th>
+                <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
-            ) : (
-              categories.map((entry) => (
-                <tr className="border-b border-slate-100" key={entry.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-800">{entry.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.created_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={deletingCategoryId === entry.id}
-                      onClick={() => handleDeleteCategory(entry.id, entry.name)}
-                    >
-                      {deletingCategoryId === entry.id ? 'Deleting...' : 'Delete'}
-                    </button>
+            </thead>
+            <tbody>
+              {categories.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-4 text-sm text-slate-500" colSpan={3}>
+                    No categories found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                categories.map((entry) => (
+                  <tr className="border-b border-slate-100" key={entry.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{entry.name}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={deletingCategoryId === entry.id}
+                        onClick={() => handleDeleteCategory(entry.id, entry.name)}
+                      >
+                        {deletingCategoryId === entry.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isAddModalOpen ? (
