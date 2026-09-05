@@ -71,20 +71,16 @@ export async function getUserProfileUseCase(userId) {
   const client = ensureSupabase();
   const { data, error } = await client
     .from('profiles')
-    .select('id, role')
+    .select('id, role, full_name, track')
     .eq('id', userId)
     .maybeSingle();
 
   if (error) {
-    if (error.code === '42P01') {
-      return { id: userId, role: 'student' };
-    }
-
     throw error;
   }
 
   if (!data) {
-    return { id: userId, role: 'student' };
+    throw new Error('Your school account profile is unavailable. Contact the administrator.');
   }
 
   return data;

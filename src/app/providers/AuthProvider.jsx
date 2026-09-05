@@ -70,7 +70,9 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     if (!hasSupabaseConfig || !supabase) {
@@ -79,47 +81,60 @@ export function AuthProvider({ children }) {
     }
 
     let isMounted = true;
+    let profileRequest = 0;
+    let authEvents = 0;
 
     const syncProfile = async (currentUser) => {
+      const request = ++profileRequest;
       if (!currentUser) {
         if (isMounted) {
           setRole(null);
+          setProfile(null);
+          setProfileLoading(false);
         }
         return;
       }
 
+      setProfileLoading(true);
       try {
-        const profile = await getUserProfileUseCase(currentUser.id);
-        if (isMounted) {
-          setRole(normalizeRole(profile?.role));
+        const fetchedProfile = await getUserProfileUseCase(currentUser.id);
+        if (isMounted && request === profileRequest) {
+          setRole(normalizeRole(fetchedProfile?.role));
+          setProfile(fetchedProfile ?? null);
         }
       } catch {
-        if (isMounted) {
-          setRole((currentRole) => currentRole ?? resolveRole(currentUser) ?? normalizeRole());
+        if (isMounted && request === profileRequest) {
+          setRole(null);
+          setProfile(null);
         }
+      } finally {
+        if (isMounted && request === profileRequest) setProfileLoading(false);
       }
     };
 
     const bootstrap = async () => {
+      const initialEvent = authEvents;
       try {
         const initialSession = await withTimeout(getInitialSession(), AUTH_BOOTSTRAP_TIMEOUT_MS);
+        if (!isMounted || authEvents !== initialEvent) return;
         const currentUser = initialSession?.user ?? null;
 
         if (isMounted) {
           setSession(initialSession);
           setUser(currentUser);
-          setRole(resolveRole(currentUser));
-          setLoading(false);
+          setRole(null);
+          setProfile(null);
         }
 
-        void syncProfile(currentUser);
+        await syncProfile(currentUser);
+        if (isMounted) setLoading(false);
       } catch (error) {
         if (!isLockStealAbortError(error) && !isAuthBootstrapTimeoutError(error)) {
           console.error('Failed to initialize auth session.', error);
         }
 
         if (isMounted) {
-          setRole(normalizeRole());
+          setRole(null);
           setLoading(false);
         }
       }
@@ -132,10 +147,18 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      const eventId = ++authEvents;
+      ++profileRequest;
+      setLoading(false);
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
-      setRole(resolveRole(nextSession?.user ?? null));
-      void syncProfile(nextSession?.user ?? null);
+      setRole(null);
+      setProfile(null);
+      setProfileLoading(Boolean(nextSession?.user));
+      // Supabase auth callbacks must return before making another client request.
+      setTimeout(() => {
+        if (isMounted && authEvents === eventId) void syncProfile(nextSession?.user ?? null);
+      }, 0);
     });
 
     return () => {
@@ -149,13 +172,15 @@ export function AuthProvider({ children }) {
       session,
       user,
       role,
+      profile,
       loading,
+      profileLoading,
       hasSupabaseConfig,
       signIn: signInUseCase,
       signUp: signUpUseCase,
       signOut: signOutUseCase
     }),
-    [session, user, role, loading]
+    [session, user, role, profile, loading, profileLoading]
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

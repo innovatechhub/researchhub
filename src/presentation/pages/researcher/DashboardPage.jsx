@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { useToast } from '../../../app/providers/ToastProvider';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -11,7 +12,9 @@ import {
 const ROWS_PER_PAGE = 10;
 
 function normalizeText(value) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function getDocumentFormatFromPath(filePath) {
@@ -84,7 +87,9 @@ async function convertDocxBlobToPdfBlob(docxBlob) {
 
   const arrayBuffer = await docxBlob.arrayBuffer();
   const { value: rawText } = await mammoth.extractRawText({ arrayBuffer });
-  const normalizedText = String(rawText || '').replace(/\r\n/g, '\n').trim();
+  const normalizedText = String(rawText || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
 
   if (!normalizedText) {
     throw new Error('No readable text found in the DOCX file.');
@@ -132,7 +137,12 @@ function SummaryCardIcon({ type }) {
   if (type === 'published') {
     return (
       <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-        <path d="M7 5h10a2 2 0 0 1 2 2v12l-3-1.8L13 19l-3-1.8L7 19V7a2 2 0 0 1 2-2Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        <path
+          d="M7 5h10a2 2 0 0 1 2 2v12l-3-1.8L13 19l-3-1.8L7 19V7a2 2 0 0 1 2-2Z"
+          stroke="currentColor"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
@@ -154,7 +164,12 @@ function SummaryCardIcon({ type }) {
         <circle cx="7" cy="7" r="2.2" stroke="currentColor" strokeWidth="1.8" />
         <circle cx="17" cy="7" r="2.2" stroke="currentColor" strokeWidth="1.8" />
         <circle cx="12" cy="17" r="2.2" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M9 8.8 10.9 14M15 8.8 13.1 14M9.3 17h5.4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M9 8.8 10.9 14M15 8.8 13.1 14M9.3 17h5.4"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
@@ -162,12 +177,18 @@ function SummaryCardIcon({ type }) {
   return (
     <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
       <rect height="16" rx="2" stroke="currentColor" strokeWidth="1.8" width="14" x="5" y="4" />
-      <path d="M8.5 2.8v3M15.5 2.8v3M8.5 10.5h7M8.5 14.5h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <path
+        d="M8.5 2.8v3M15.5 2.8v3M8.5 10.5h7M8.5 14.5h4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
     </svg>
   );
 }
 
 export function ResearcherDashboardPage() {
+  const [searchParams] = useSearchParams();
   const { user, hasSupabaseConfig, role } = useAuth();
   const toast = useToast();
   const canDownloadFiles = role !== 'researcher';
@@ -178,28 +199,27 @@ export function ResearcherDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [fileLoadingId, setFileLoadingId] = useState('');
   const [exportingAll, setExportingAll] = useState(false);
-  const [expandedResearchId, setExpandedResearchId] = useState('');
+  const [expandedResearchId, setExpandedResearchId] = useState(
+    () => searchParams.get('research') || ''
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDownloadFormat, setSelectedDownloadFormat] = useState('pdf');
 
-  const loadResearches = useCallback(
-    async () => {
-      if (!hasSupabaseConfig || !user) {
-        setLoading(false);
-        return;
-      }
+  const loadResearches = useCallback(async () => {
+    if (!hasSupabaseConfig || !user) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const records = await listApprovedResearchesUseCase();
-        setResearches(records);
-      } catch (error) {
-        toast.error(error.message || 'Unable to load published research.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [hasSupabaseConfig, toast, user]
-  );
+    try {
+      const records = await listApprovedResearchesUseCase();
+      setResearches(records);
+    } catch (error) {
+      toast.error(error.message || 'Unable to load published research.');
+    } finally {
+      setLoading(false);
+    }
+  }, [hasSupabaseConfig, toast, user]);
 
   useEffect(() => {
     loadResearches();
@@ -246,7 +266,10 @@ export function ResearcherDashboardPage() {
         }
       }
 
-      if (strandFilter !== 'all' && normalizeText(research.strand) !== normalizeText(strandFilter)) {
+      if (
+        strandFilter !== 'all' &&
+        normalizeText(research.strand) !== normalizeText(strandFilter)
+      ) {
         return false;
       }
 
@@ -280,15 +303,15 @@ export function ResearcherDashboardPage() {
   }, [paginatedResearches.length]);
 
   const expandedResearch = useMemo(
-    () => paginatedResearches.find((research) => research.id === expandedResearchId) ?? null,
-    [expandedResearchId, paginatedResearches]
+    () => researches.find((research) => research.id === expandedResearchId) ?? null,
+    [expandedResearchId, researches]
   );
 
   useEffect(() => {
-    if (expandedResearchId && !expandedResearch) {
+    if (!loading && expandedResearchId && !expandedResearch) {
       setExpandedResearchId('');
     }
-  }, [expandedResearch, expandedResearchId]);
+  }, [expandedResearch, expandedResearchId, loading]);
 
   useEffect(() => {
     if (!expandedResearch) {
@@ -487,7 +510,9 @@ export function ResearcherDashboardPage() {
               <SummaryCardIcon type="categories" />
             </span>
           </div>
-          <p className="mt-2 text-3xl font-bold text-brand-700">{filterOptions.categories.length}</p>
+          <p className="mt-2 text-3xl font-bold text-brand-700">
+            {filterOptions.categories.length}
+          </p>
           <p className="mt-1 text-sm text-slate-500">Unique research categories.</p>
         </article>
 
@@ -519,7 +544,9 @@ export function ResearcherDashboardPage() {
           <div
             className={[
               'grid gap-3',
-              canDownloadFiles ? 'lg:grid-cols-[1.6fr_1fr_1fr_auto]' : 'lg:grid-cols-[1.6fr_1fr_1fr]'
+              canDownloadFiles
+                ? 'lg:grid-cols-[1.6fr_1fr_1fr_auto]'
+                : 'lg:grid-cols-[1.6fr_1fr_1fr]'
             ].join(' ')}
           >
             <label className="space-y-1" htmlFor="research-search">
@@ -608,11 +635,15 @@ export function ResearcherDashboardPage() {
               ) : (
                 paginatedResearches.map((research) => (
                   <tr className="border-b border-slate-100" key={research.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{research.title}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                      {research.title}
+                    </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {research.authors.length > 0 ? research.authors.join(', ') : 'N/A'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{research.category || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {research.category || 'N/A'}
+                    </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{research.strand || 'N/A'}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{research.year ?? 'N/A'}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">
@@ -643,7 +674,8 @@ export function ResearcherDashboardPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-3">
           <p className="text-xs text-slate-600">
-            Showing {filteredResearches.length} of {researches.length} published research entries. Page {currentPage} of {totalPages}.
+            Showing {filteredResearches.length} of {researches.length} published research entries.
+            Page {currentPage} of {totalPages}.
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -680,10 +712,16 @@ export function ResearcherDashboardPage() {
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
               <div className="space-y-2">
-                <h3 className="text-base font-semibold text-slate-900 sm:text-lg" id="research-details-modal-title">
+                <h3
+                  className="text-base font-semibold text-slate-900 sm:text-lg"
+                  id="research-details-modal-title"
+                >
                   {expandedResearch.title}
                 </h3>
-                <p className="text-xs text-slate-500">Published on {formatDate(expandedResearch.reviewedAt || expandedResearch.submittedAt)}</p>
+                <p className="text-xs text-slate-500">
+                  Published on{' '}
+                  {formatDate(expandedResearch.reviewedAt || expandedResearch.submittedAt)}
+                </p>
               </div>
               <button
                 type="button"
@@ -692,7 +730,12 @@ export function ResearcherDashboardPage() {
                 aria-label="Close details modal"
               >
                 <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+                  <path
+                    d="M6 6l12 12M18 6l-12 12"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.8"
+                  />
                 </svg>
               </button>
             </div>
@@ -700,7 +743,9 @@ export function ResearcherDashboardPage() {
             <div className="max-h-[calc(100vh-11rem)] space-y-6 overflow-y-auto px-5 py-4 sm:max-h-[calc(100vh-10rem)] sm:px-6 sm:py-5">
               <section className="grid gap-3 sm:grid-cols-2">
                 <article className="rounded-lg border border-slate-200 bg-white p-3 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Research Title</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Research Title
+                  </p>
                   <p className="mt-1 text-base font-semibold leading-6 text-slate-900">
                     {expandedResearch.title || 'N/A'}
                   </p>
@@ -708,29 +753,43 @@ export function ResearcherDashboardPage() {
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">Authors</p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">
-                    {expandedResearch.authors.length > 0 ? expandedResearch.authors.join(', ') : 'N/A'}
+                    {expandedResearch.authors.length > 0
+                      ? expandedResearch.authors.join(', ')
+                      : 'N/A'}
                   </p>
                 </article>
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Publication Date</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Publication Date
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
                     {formatDate(expandedResearch.reviewedAt || expandedResearch.submittedAt)}
                   </p>
                 </article>
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">Category</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{expandedResearch.category || 'N/A'}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {expandedResearch.category || 'N/A'}
+                  </p>
                 </article>
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">Strand</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{expandedResearch.strand || 'N/A'}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {expandedResearch.strand || 'N/A'}
+                  </p>
                 </article>
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Academic Year</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{expandedResearch.year ?? 'N/A'}</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Academic Year
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {expandedResearch.year ?? 'N/A'}
+                  </p>
                 </article>
                 <article className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Document Format</p>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                    Document Format
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
                     {getDocumentFormatLabel(getDocumentFormatFromPath(expandedResearch.filePath))}
                   </p>
@@ -738,7 +797,9 @@ export function ResearcherDashboardPage() {
               </section>
 
               <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Abstract</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Abstract
+                </p>
                 <p className="mt-2 text-sm leading-7 text-slate-700">
                   {expandedResearch.abstract || 'No abstract provided.'}
                 </p>
@@ -746,7 +807,9 @@ export function ResearcherDashboardPage() {
 
               {expandedResearch.keywords.length > 0 ? (
                 <section className="space-y-2">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Keywords</h4>
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Keywords
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {expandedResearch.keywords.map((keyword) => (
                       <span
@@ -762,15 +825,21 @@ export function ResearcherDashboardPage() {
 
               {expandedResearch.comments.length > 0 ? (
                 <section className="space-y-2">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Reviewer Notes</h4>
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Reviewer Notes
+                  </h4>
                   <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
                     {expandedResearch.comments.map((comment) => (
                       <article className="rounded-md bg-white p-3" key={comment.id}>
                         <p className="text-sm text-slate-800">{comment.comment}</p>
                         {comment.suggestion ? (
-                          <p className="mt-1 text-xs text-slate-600">Suggestion: {comment.suggestion}</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            Suggestion: {comment.suggestion}
+                          </p>
                         ) : null}
-                        <p className="mt-2 text-xs text-slate-500">{formatDate(comment.createdAt)}</p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {formatDate(comment.createdAt)}
+                        </p>
                       </article>
                     ))}
                   </div>
@@ -779,7 +848,9 @@ export function ResearcherDashboardPage() {
 
               {canDownloadFiles ? (
                 <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Download Options</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Download Options
+                  </p>
                   <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <label className="space-y-1" htmlFor="research-save-as">
                       <span className="text-xs text-slate-600">Save as</span>
@@ -807,7 +878,8 @@ export function ResearcherDashboardPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-[11px] text-slate-500">
-                    Available file: {getDocumentFormatLabel(getDocumentFormatFromPath(expandedResearch.filePath))}
+                    Available file:{' '}
+                    {getDocumentFormatLabel(getDocumentFormatFromPath(expandedResearch.filePath))}
                   </p>
                 </section>
               ) : null}

@@ -1,19 +1,35 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { getDashboardRouteByRole } from '../../core/constants/routes';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { useToast } from '../../app/providers/ToastProvider';
 import { TextField } from '../components/common/TextField';
 
 export function LoginPage() {
-  const { hasSupabaseConfig, user, role, signIn } = useAuth();
+  const { hasSupabaseConfig, user, role, signIn, loading: authLoading, profileLoading } = useAuth();
+  const [params] = useSearchParams();
+  const location = useLocation();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (user) {
-    return <Navigate to={getDashboardRouteByRole(role)} replace />;
+  if (authLoading || profileLoading) return <p role="status">Loading your account…</p>;
+  if (user && role) {
+    const researchId = params.get('research');
+    const from = location.state?.from;
+    const safeFrom =
+      typeof from === 'string' &&
+      new RegExp(`^/${role}/(?:dashboard|progress|submit|library|research/[a-f0-9-]{36})$`).test(
+        from
+      )
+        ? from
+        : null;
+    const target =
+      researchId && /^[a-f0-9-]{36}$/i.test(researchId)
+        ? `/${role}/library?research=${researchId}`
+        : safeFrom || getDashboardRouteByRole(role);
+    return <Navigate to={target} replace />;
   }
 
   const handleSubmit = async (event) => {
@@ -35,15 +51,15 @@ export function LoginPage() {
   return (
     <section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card sm:p-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Research Repository</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
         <p className="mt-2 text-sm text-slate-500">
-          Student portal for research submission and review tracking.
+          Sign in to ResearchHub BNHS with your school account.
         </p>
       </div>
 
       {!hasSupabaseConfig ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
-          Supabase configuration is missing. Add values in `.env` based on `.env.example`.
+          Sign-in is temporarily unavailable. Please contact the school administrator.
         </div>
       ) : (
         <>
@@ -78,6 +94,9 @@ export function LoginPage() {
           </form>
         </>
       )}
+      <Link to="/" className="mt-5 block text-center text-sm text-green-800">
+        ← Back to ResearchHub BNHS
+      </Link>
     </section>
   );
 }

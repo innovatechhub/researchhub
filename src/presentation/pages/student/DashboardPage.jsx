@@ -4,7 +4,6 @@ import { useToast } from '../../../app/providers/ToastProvider';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { NotificationList } from '../../components/notifications/NotificationList';
 import { ResearchList } from '../../components/research/ResearchList';
-import { ResearchAnalyticsPanel } from '../../components/analytics/ResearchAnalyticsPanel';
 import { listNotificationsUseCase, markNotificationAsReadUseCase } from '../../../application/usecases/notificationUseCases';
 import {
   getResearchFileDownloadUrlUseCase,
@@ -109,13 +108,6 @@ export function DashboardPage() {
           View submission status, reviewer comments, and review notifications in one place.
         </p>
       </section>
-
-      <ResearchAnalyticsPanel
-        records={researches}
-        title="My Submission Analytics"
-        subtitle="See which year and strand has your highest upload volume."
-        focusLabel="uploads"
-      />
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-3">

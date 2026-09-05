@@ -1,4 +1,8 @@
-# Research Repository System
+# ResearchHub BNHS
+
+ResearchHub now includes a branded public homepage, curated research previews, teacher assignments, chapter-based submission and review, deadlines, and progress reports. See [implementation and release notes](docs/implementation-notes.md) for setup, migration order, document-processing limits, and validation.
+
+Existing installations must apply [the workflow migration](supabase/migrations/202609050001_research_workflow.sql) before using the new portal screens. Do not rerun the base schema against an existing installation because it contains account seeding. Deadline reminders also require [Cron setup](supabase/enable_deadline_reminders.sql).
 
 Role-based web application for student submissions, teacher review workflows, and researcher access to approved research outputs.
 
@@ -16,7 +20,7 @@ Role-based web application for student submissions, teacher review workflows, an
 - Automatic notifications:
   - Teachers are notified for new `pending` submissions
   - Students are notified after review status updates
-- Researcher portal to browse/search/download approved research only
+- Researcher portal to browse/search approved research metadata; file access is reserved for authorized school users
 - Admin portal for:
   - user account role management
   - research category / strand / track management
@@ -49,7 +53,8 @@ The frontend follows a clean modular structure:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_SUPABASE_STORAGE_BUCKET` (default: `research-files`)
-4. In Supabase SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql).
+   - Optional: `VITE_SCHOOL_HERO_IMAGE` (original campus photo path), `VITE_SCHOOL_CONTACT_EMAIL` (verified school contact)
+4. For a new database, initialize [`supabase/schema.sql`](supabase/schema.sql), then apply [the workflow migration](supabase/migrations/202609050001_research_workflow.sql). Review the base schema's seeded account before use. Existing databases use only the new migration after schema inspection.
 5. Start dev server:
    ```bash
    npm run dev

@@ -26,6 +26,7 @@ export function AdminResearchPage() {
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [strandFilter, setStrandFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [fileLoadingId, setFileLoadingId] = useState('');
   const [selectedResearch, setSelectedResearch] = useState(null);
@@ -56,6 +57,7 @@ export function AdminResearchPage() {
   const filterOptions = useMemo(() => {
     const categories = new Set();
     const strands = new Set();
+    const years = new Set();
 
     researches.forEach((research) => {
       if (research.category) {
@@ -64,11 +66,15 @@ export function AdminResearchPage() {
       if (research.strand) {
         strands.add(research.strand);
       }
+      if (research.year) {
+        years.add(research.year);
+      }
     });
 
     return {
       categories: Array.from(categories).sort((a, b) => a.localeCompare(b)),
-      strands: Array.from(strands).sort((a, b) => a.localeCompare(b))
+      strands: Array.from(strands).sort((a, b) => a.localeCompare(b)),
+      years: Array.from(years).sort((a, b) => b - a)
     };
   }, [researches]);
 
@@ -95,9 +101,13 @@ export function AdminResearchPage() {
         return false;
       }
 
+      if (yearFilter !== 'all' && String(research.year ?? '') !== yearFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [categoryFilter, researches, searchText, strandFilter]);
+  }, [categoryFilter, researches, searchText, strandFilter, yearFilter]);
 
   const handleOpenFile = async (research) => {
     try {
@@ -131,8 +141,8 @@ export function AdminResearchPage() {
     <div>
       <section className="overflow-hidden rounded-2xl bg-white shadow-card">
         <div className="p-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <label className="space-y-2 md:col-span-2 xl:col-span-2" htmlFor="admin-research-search">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <label className="space-y-2 md:col-span-2 xl:col-span-1" htmlFor="admin-research-search">
             <span className="text-sm font-medium text-slate-700">Search</span>
             <input
               id="admin-research-search"
@@ -173,6 +183,23 @@ export function AdminResearchPage() {
               {filterOptions.strands.map((strand) => (
                 <option key={strand} value={strand}>
                   {strand}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-2" htmlFor="admin-research-year-filter">
+            <span className="text-sm font-medium text-slate-700">School Year</span>
+            <select
+              id="admin-research-year-filter"
+              value={yearFilter}
+              onChange={(event) => setYearFilter(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+            >
+              <option value="all">All school years</option>
+              {filterOptions.years.map((year) => (
+                <option key={year} value={String(year)}>
+                  {year}
                 </option>
               ))}
             </select>

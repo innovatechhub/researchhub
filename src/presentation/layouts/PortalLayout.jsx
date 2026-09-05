@@ -13,7 +13,12 @@ import { formatDate } from '../../core/utils/date';
 function MenuIcon({ className = '' }) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
     </svg>
   );
 }
@@ -22,7 +27,12 @@ function ItemIcon({ type, className = '' }) {
   if (type === 'upload') {
     return (
       <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-        <path d="M12 16V6m0 0-3.5 3.5M12 6l3.5 3.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M12 16V6m0 0-3.5 3.5M12 6l3.5 3.5"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
         <rect height="7" rx="2" stroke="currentColor" strokeWidth="1.8" width="14" x="5" y="13" />
       </svg>
     );
@@ -32,7 +42,12 @@ function ItemIcon({ type, className = '' }) {
     return (
       <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
         <rect height="14" rx="2" stroke="currentColor" strokeWidth="1.8" width="12" x="6" y="5" />
-        <path d="M9 9h6M9 12h6M9 15h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M9 9h6M9 12h6M9 15h4"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
@@ -41,8 +56,18 @@ function ItemIcon({ type, className = '' }) {
     return (
       <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
         <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M4.5 18c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-        <path d="M15.5 15.5a4 4 0 0 1 4 2.5M14.5 6.8a2.6 2.6 0 0 1 0 4.4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M4.5 18c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M15.5 15.5a4 4 0 0 1 4 2.5M14.5 6.8a2.6 2.6 0 0 1 0 4.4"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
@@ -50,8 +75,17 @@ function ItemIcon({ type, className = '' }) {
   if (type === 'library') {
     return (
       <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-        <path d="M6 5h9a3 3 0 0 1 3 3v11H9a3 3 0 0 0-3 3V5Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M6 5v14a3 3 0 0 1 3-3h9" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M6 5h9a3 3 0 0 1 3 3v11H9a3 3 0 0 0-3 3V5Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M6 5v14a3 3 0 0 1 3-3h9"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
@@ -72,7 +106,12 @@ function ItemIcon({ type, className = '' }) {
 
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
-      <path d="M4 10.5 12 4l8 6.5V20H4v-9.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      <path
+        d="M4 10.5 12 4l8 6.5V20H4v-9.5Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
       <path d="M9 20v-5h6v5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
     </svg>
   );
@@ -249,7 +288,10 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
     <div className="min-h-screen bg-slate-100 md:grid md:h-screen md:grid-cols-[280px_1fr] md:overflow-hidden">
       <aside className="hidden bg-slate-900 text-white md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-hidden">
         <div className="border-b border-slate-800 px-5 py-5">
-          <p className="text-base font-semibold">Research Repository</p>
+          <NavLink to="/" className="flex items-center gap-3">
+            <img src="/brand/researchhub-bnhs-logo.jpg" className="h-11 w-11 rounded-full" alt="" />
+            <span className="text-base font-semibold">ResearchHub BNHS</span>
+          </NavLink>
           <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">{portalLabel}</p>
         </div>
 
@@ -278,7 +320,9 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
                         ].join(' ')}
                       >
                         <ItemIcon
-                          className={['h-4 w-4', isActive ? 'text-white' : 'text-slate-300'].join(' ')}
+                          className={['h-4 w-4', isActive ? 'text-white' : 'text-slate-300'].join(
+                            ' '
+                          )}
                           type={mapIconType(item)}
                         />
                       </span>
@@ -291,7 +335,8 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
 
             const isExpanded = expandedMenus[item.label] ?? false;
             const isActiveGroup =
-              item.to === location.pathname || item.children.some((child) => child.to === location.pathname);
+              item.to === location.pathname ||
+              item.children.some((child) => child.to === location.pathname);
 
             return (
               <div className="space-y-1" key={item.label}>
@@ -322,18 +367,28 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
                     ].join(' ')}
                   >
                     <ItemIcon
-                      className={['h-4 w-4', isActiveGroup ? 'text-white' : 'text-slate-300'].join(' ')}
+                      className={['h-4 w-4', isActiveGroup ? 'text-white' : 'text-slate-300'].join(
+                        ' '
+                      )}
                       type={mapIconType(item)}
                     />
                   </span>
                   <span className="flex-1">{item.label}</span>
                   <svg
-                    className={['h-4 w-4 transition-transform', isExpanded ? 'rotate-180' : 'rotate-0'].join(' ')}
+                    className={[
+                      'h-4 w-4 transition-transform',
+                      isExpanded ? 'rotate-180' : 'rotate-0'
+                    ].join(' ')}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                    <path
+                      d="m6 9 6 6 6-6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                    />
                   </svg>
                 </button>
 
@@ -378,7 +433,10 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
       </aside>
 
       {mobileMenuOpen ? (
-        <div className="fixed inset-0 z-40 bg-slate-900/60 md:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/60 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        >
           <div
             className="h-full w-[80%] max-w-[320px] overflow-y-auto bg-slate-900 text-white"
             onClick={(event) => event.stopPropagation()}
@@ -502,7 +560,9 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
                                     void handleMarkNotificationRead(notification.id);
                                   }}
                                 >
-                                  {notificationLoadingId === notification.id ? 'Updating...' : 'Mark read'}
+                                  {notificationLoadingId === notification.id
+                                    ? 'Updating...'
+                                    : 'Mark read'}
                                 </button>
                               ) : null}
                             </div>
@@ -513,7 +573,6 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
                   </div>
                 ) : null}
               </div>
-
             </div>
           </div>
 

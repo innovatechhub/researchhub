@@ -6,14 +6,16 @@ export function ResearchSubmissionForm({
   onSubmit,
   submitting,
   strandOptions = [],
-  categoryOptions = []
+  categoryOptions = [],
+  defaultAuthor = '',
+  defaultStrand = ''
 }) {
   const toast = useToast();
   const [title, setTitle] = useState('');
   const [abstract, setAbstract] = useState('');
-  const [authorsText, setAuthorsText] = useState('');
+  const [authorsText, setAuthorsText] = useState(defaultAuthor);
   const [keywordsText, setKeywordsText] = useState('');
-  const [strand, setStrand] = useState('');
+  const [strand, setStrand] = useState(defaultStrand);
   const [category, setCategory] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [file, setFile] = useState(null);
@@ -28,9 +30,9 @@ export function ResearchSubmissionForm({
       await onSubmit({ title, abstract, authorsText, keywordsText, strand, category, year, file });
       setTitle('');
       setAbstract('');
-      setAuthorsText('');
+      setAuthorsText(defaultAuthor);
       setKeywordsText('');
-      setStrand('');
+      setStrand(defaultStrand);
       setCategory('');
       setYear(new Date().getFullYear());
       setFile(null);

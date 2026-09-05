@@ -4,6 +4,8 @@ import { supabase } from '../supabase/supabaseClient';
 const BASE_RESEARCH_SELECT_FIELDS = `
   id,
   student_id,
+  teacher_id,
+  workflow_enabled,
   title,
   abstract,
   authors,
@@ -63,8 +65,6 @@ export async function submitResearchRepository({
     throw uploadError;
   }
 
-  const { data: publicFileData } = client.storage.from(env.storageBucket).getPublicUrl(filePath);
-
   const { data, error } = await client
     .from('researches')
     .insert({
@@ -77,7 +77,7 @@ export async function submitResearchRepository({
       year,
       keywords,
       file_path: filePath,
-      file_url: publicFileData.publicUrl,
+      file_url: null,
       status: 'pending'
     })
     .select(RESEARCH_WITH_COMMENTS_SELECT_FIELDS)
@@ -195,7 +195,9 @@ export async function listApprovedResearchesRepository() {
 export async function getResearchFileDownloadUrlRepository(filePath) {
   const client = ensureSupabase();
 
-  const { data, error } = await client.storage.from(env.storageBucket).createSignedUrl(filePath, 300);
+  const { data, error } = await client.storage
+    .from(env.storageBucket)
+    .createSignedUrl(filePath, 300);
 
   if (error) {
     throw error;

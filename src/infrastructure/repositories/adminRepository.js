@@ -1,5 +1,6 @@
 import { hasSupabaseConfig } from '../../core/config/env';
 import { supabase } from '../supabase/supabaseClient';
+import { env } from '../../core/config/env';
 
 function ensureSupabase() {
   if (!hasSupabaseConfig || !supabase) {
@@ -32,24 +33,31 @@ async function countRows(queryBuilder, fallbackMessage) {
 export async function getAdminDashboardStatsRepository() {
   const client = ensureSupabase();
 
-  const [totalUsers, totalResearchSubmissions, pendingApprovals, approvedResearch] = await Promise.all([
-    countRows(client.from('profiles').select('*', { count: 'exact', head: true }), 'Unable to load user count.'),
-    countRows(
-      client.from('researches').select('*', { count: 'exact', head: true }),
-      'Unable to load research submission count.'
-    ),
-    countRows(
-      client
-        .from('researches')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'needs_revision']),
-      'Unable to load pending approvals count.'
-    ),
-    countRows(
-      client.from('researches').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-      'Unable to load approved research count.'
-    )
-  ]);
+  const [totalUsers, totalResearchSubmissions, pendingApprovals, approvedResearch] =
+    await Promise.all([
+      countRows(
+        client.from('profiles').select('*', { count: 'exact', head: true }),
+        'Unable to load user count.'
+      ),
+      countRows(
+        client.from('researches').select('*', { count: 'exact', head: true }),
+        'Unable to load research submission count.'
+      ),
+      countRows(
+        client
+          .from('researches')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'needs_revision']),
+        'Unable to load pending approvals count.'
+      ),
+      countRows(
+        client
+          .from('researches')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'approved'),
+        'Unable to load approved research count.'
+      )
+    ]);
 
   return {
     totalUsers,
@@ -222,7 +230,11 @@ export async function listStrandsRepository() {
 
 export async function createStrandRepository({ name }) {
   const client = ensureSupabase();
-  const { data, error } = await client.from('strands').insert({ name }).select('id,name,created_at').single();
+  const { data, error } = await client
+    .from('strands')
+    .insert({ name })
+    .select('id,name,created_at')
+    .single();
 
   if (error) {
     throw normalizeError(error, 'Unable to create strand.');
@@ -319,62 +331,107 @@ export async function cleanRejectedResearchRecordsRepository({ olderThanDays }) 
     throw normalizeError(error, 'Unable to clean rejected research records.');
   }
 
+  // Deletion queues original paths transactionally; a failed storage request can be retried.
+  const { data: queued, error: queueError } = await client
+    .from('storage_cleanup_queue')
+    .select('file_path')
+    .limit(500);
+  if (queueError)
+    throw normalizeError(queueError, 'Records deleted, but file cleanup could not be loaded.');
+  let removedFiles = 0;
+  for (const entry of queued || []) {
+    const [documents, researches] = await Promise.all([
+      client.from('research_documents').select('id').eq('file_path', entry.file_path).limit(1),
+      client.from('researches').select('id').eq('file_path', entry.file_path).limit(1)
+    ]);
+    if (documents.error || researches.error)
+      throw normalizeError(
+        documents.error || researches.error,
+        'File cleanup could not verify references.'
+      );
+    if (!documents.data.length && !researches.data.length) {
+      const { error: removeError } = await client.storage
+        .from(env.storageBucket)
+        .remove([entry.file_path]);
+      if (removeError)
+        throw normalizeError(
+          removeError,
+          'Records deleted; original files are queued for cleanup retry.'
+        );
+      removedFiles++;
+    }
+    const { error: ackError } = await client
+      .from('storage_cleanup_queue')
+      .delete()
+      .eq('file_path', entry.file_path);
+    if (ackError)
+      throw normalizeError(ackError, 'File cleanup acknowledgement failed; retry cleanup.');
+  }
+
   return {
     deletedCount: data?.length ?? 0,
+    removedFiles,
     cutoffDate
   };
 }
 
 export async function exportBackupRepository() {
   const client = ensureSupabase();
-
-  const [
-    profilesResult,
-    researchesResult,
-    commentsResult,
-    notificationsResult,
-    categoriesResult,
-    strandsResult,
-    tracksResult
-  ] = await Promise.all([
-    client.from('profiles').select('id,email,full_name,role,created_at').order('created_at'),
-    client
-      .from('researches')
-      .select(
-        'id,student_id,title,abstract,authors,keywords,strand,category,year,status,file_path,file_url,submitted_at,reviewed_at,created_at,updated_at'
-      )
-      .order('submitted_at'),
-    client.from('research_comments').select('id,research_id,author_id,comment,suggestion,created_at').order('created_at'),
-    client.from('notifications').select('id,user_id,research_id,message,is_read,created_at').order('created_at'),
-    client.from('research_categories').select('id,name,created_at').order('name'),
-    client.from('strands').select('id,name,created_at').order('name'),
-    client.from('tracks').select('id,name,strand_id,created_at').order('name')
-  ]);
-
-  const errors = [
-    profilesResult.error,
-    researchesResult.error,
-    commentsResult.error,
-    notificationsResult.error,
-    categoriesResult.error,
-    strandsResult.error,
-    tracksResult.error
-  ].filter(Boolean);
-
-  if (errors.length > 0) {
-    throw normalizeError(errors[0], 'Unable to export backup.');
+  const names = [
+    'profiles',
+    'researches',
+    'research_comments',
+    'notifications',
+    'research_categories',
+    'strands',
+    'tracks',
+    'teacher_student_assignments',
+    'research_assignment_history',
+    'workflow_settings',
+    'research_documents',
+    'document_processing_jobs',
+    'research_chapters',
+    'chapter_versions',
+    'chapter_reviews',
+    'chapter_deadlines',
+    'chapter_deadline_history',
+    'public_research_previews',
+    'storage_cleanup_queue'
+  ];
+  const tables = {};
+  for (const table of names) {
+    const order =
+      table === 'chapter_deadlines'
+        ? 'chapter_id'
+        : table === 'public_research_previews'
+          ? 'research_id'
+          : table === 'storage_cleanup_queue'
+            ? 'file_path'
+            : 'id';
+    tables[table] = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await client
+        .from(table)
+        .select('*')
+        .order(order)
+        .range(offset, offset + 499);
+      if (error) throw normalizeError(error, `Unable to export ${table}.`);
+      tables[table].push(...data);
+      if (data.length < 500) break;
+    }
   }
-
   return {
     exportedAt: new Date().toISOString(),
-    tables: {
-      profiles: profilesResult.data ?? [],
-      researches: researchesResult.data ?? [],
-      research_comments: commentsResult.data ?? [],
-      notifications: notificationsResult.data ?? [],
-      research_categories: categoriesResult.data ?? [],
-      strands: strandsResult.data ?? [],
-      tracks: tracksResult.data ?? []
-    }
+    kind: 'metadata-export',
+    tables,
+    fileManifest: [
+      ...new Set(
+        [
+          ...tables.researches.map((r) => r.file_path),
+          ...tables.research_documents.map((d) => d.file_path)
+        ].filter(Boolean)
+      )
+    ],
+    note: 'Original files are listed but not embedded. Use scripts/backup.mjs for a table and file export.'
   };
 }

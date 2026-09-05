@@ -18,7 +18,7 @@ const statusStyles = {
 };
 
 export function SubmitResearchPage() {
-  const { user, hasSupabaseConfig } = useAuth();
+  const { user, profile, hasSupabaseConfig } = useAuth();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [researches, setResearches] = useState([]);
@@ -214,6 +214,8 @@ export function SubmitResearchPage() {
                 submitting={submitting}
                 strandOptions={strands}
                 categoryOptions={categories}
+                defaultAuthor={profile?.full_name || ''}
+                defaultStrand={profile?.track || ''}
               />
             </div>
           </div>

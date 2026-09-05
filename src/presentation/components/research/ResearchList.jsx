@@ -1,4 +1,6 @@
 import { formatDate } from '../../../core/utils/date';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../../app/providers/AuthProvider';
 
 const statusStyles = {
   pending: 'bg-amber-100 text-amber-800',
@@ -8,6 +10,7 @@ const statusStyles = {
 };
 
 export function ResearchList({ researches, onOpenFile, fileLoadingId }) {
+  const { role } = useAuth();
   if (researches.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
@@ -45,7 +48,8 @@ export function ResearchList({ researches, onOpenFile, fileLoadingId }) {
               <span className="font-semibold text-slate-700">Year:</span> {research.year ?? 'N/A'}
             </p>
             <p>
-              <span className="font-semibold text-slate-700">Strand:</span> {research.strand || 'N/A'}
+              <span className="font-semibold text-slate-700">Strand:</span>{' '}
+              {research.strand || 'N/A'}
             </p>
             <p>
               <span className="font-semibold text-slate-700">Category:</span>{' '}
@@ -67,13 +71,25 @@ export function ResearchList({ researches, onOpenFile, fileLoadingId }) {
           ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
+            {role !== 'researcher' && (
+              <Link
+                className="rounded-lg bg-brand-700 px-3 py-2 text-xs font-semibold text-white"
+                to={`/${role}/research/${research.id}`}
+              >
+                Open chapter workspace
+              </Link>
+            )}
             <button
               type="button"
               className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-              disabled={fileLoadingId === research.id}
+              disabled={fileLoadingId === research.id || !research.filePath}
               onClick={() => onOpenFile(research)}
             >
-              {fileLoadingId === research.id ? 'Preparing file...' : 'Open uploaded file'}
+              {fileLoadingId === research.id
+                ? 'Preparing file...'
+                : research.filePath
+                  ? 'Open posted/original file'
+                  : 'Manuscripts in workspace'}
             </button>
           </div>
 

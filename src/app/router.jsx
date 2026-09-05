@@ -1,130 +1,182 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { ROUTES, getDashboardRouteByRole } from '../core/constants/routes';
-import { useAuth } from './providers/AuthProvider';
+import { ROUTES } from '../core/constants/routes';
 import { AuthLayout } from '../presentation/layouts/AuthLayout';
 import { StudentLayout } from '../presentation/layouts/StudentLayout';
 import { RoleLayout } from '../presentation/layouts/RoleLayout';
 import { LoginPage } from '../presentation/pages/LoginPage';
-import { DashboardPage as StudentDashboardPage } from '../presentation/pages/student/DashboardPage';
-import { SubmitResearchPage } from '../presentation/pages/student/SubmitResearchPage';
-import { TeacherDashboardPage } from '../presentation/pages/teacher/DashboardPage';
-import { TeacherApprovalPage } from '../presentation/pages/teacher/Approval';
-import { AdminDashboardPage } from '../presentation/pages/admin/DashboardPage';
-import { AdminResearchPage } from '../presentation/pages/admin/Research';
-import { UserManagementPage } from '../presentation/pages/admin/UserManagement';
-import { StrandPage } from '../presentation/pages/admin/Strand';
-import { CategoryPage } from '../presentation/pages/admin/Category';
-import { ResearcherDashboardPage } from '../presentation/pages/researcher/DashboardPage';
-import { ResearcherOverviewPage } from '../presentation/pages/researcher/OverviewPage';
 import { ProtectedRoute } from '../presentation/routes/ProtectedRoute';
-import { LoadingSpinner } from '../presentation/components/common/LoadingSpinner';
+import { PublicLayout } from '../presentation/layouts/PublicLayout';
+import { HomePage, BrowsePage, InformationPage } from '../presentation/pages/public/PublicPages';
+const page = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })));
+const StudentDashboardPage = page(
+  () => import('../presentation/pages/student/DashboardPage'),
+  'DashboardPage'
+);
+const AdminDashboardPage = page(
+  () => import('../presentation/pages/admin/DashboardPage'),
+  'AdminDashboardPage'
+);
+const AdminResearchPage = page(
+  () => import('../presentation/pages/admin/Research'),
+  'AdminResearchPage'
+);
+const UserManagementPage = page(
+  () => import('../presentation/pages/admin/UserManagement'),
+  'UserManagementPage'
+);
+const StrandPage = page(() => import('../presentation/pages/admin/Strand'), 'StrandPage');
+const CategoryPage = page(() => import('../presentation/pages/admin/Category'), 'CategoryPage');
+const ReportsPage = page(() => import('../presentation/pages/admin/Reports'), 'ReportsPage');
+const ResearcherDashboardPage = page(
+  () => import('../presentation/pages/researcher/DashboardPage'),
+  'ResearcherDashboardPage'
+);
+const ResearcherOverviewPage = page(
+  () => import('../presentation/pages/researcher/OverviewPage'),
+  'ResearcherOverviewPage'
+);
+const ResearchWorkspace = page(
+  () => import('../presentation/pages/workflow/ResearchWorkspace'),
+  'ResearchWorkspace'
+);
+const NewResearchPage = page(
+  () => import('../presentation/pages/workflow/NewResearchPage'),
+  'NewResearchPage'
+);
+const ProgressPage = page(
+  () => import('../presentation/pages/workflow/ProgressPage'),
+  'ProgressPage'
+);
+const AssignmentsPage = page(
+  () => import('../presentation/pages/workflow/AssignmentsPage'),
+  'AssignmentsPage'
+);
+const PublicationsPage = page(
+  () => import('../presentation/pages/workflow/PublicationsPage'),
+  'PublicationsPage'
+);
 
 export function AppRouter() {
-  const { loading, user, role } = useAuth();
-  const defaultDashboardRoute = getDashboardRouteByRole(role);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   return (
-    <Routes>
-      <Route
-        path={ROUTES.login}
-        element={
-          <AuthLayout>
-            {user ? <Navigate to={defaultDashboardRoute} replace /> : <LoginPage />}
-          </AuthLayout>
-        }
-      />
-
-      <Route
-        path={ROUTES.root}
-        element={<Navigate to={user ? defaultDashboardRoute : ROUTES.login} replace />}
-      />
-
-      <Route element={<ProtectedRoute allowRoles={['student']} />}>
-        <Route element={<StudentLayout />}>
-          <Route path={ROUTES.studentDashboard} element={<StudentDashboardPage />} />
-          <Route path={ROUTES.studentSubmit} element={<SubmitResearchPage />} />
-          <Route path={ROUTES.studentLibrary} element={<ResearcherDashboardPage />} />
+    <Suspense
+      fallback={
+        <div className="empty-panel" role="status">
+          Loading page…
+        </div>
+      }
+    >
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/browse" element={<BrowsePage />} />
+          <Route path="/about" element={<InformationPage type="about" />} />
+          <Route path="/guidelines" element={<InformationPage type="guidelines" />} />
+          <Route path="/contact" element={<InformationPage type="contact" />} />
         </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowRoles={['teacher']} />}>
         <Route
+          path={ROUTES.login}
           element={
-            <RoleLayout
-              portalLabel="Teacher Portal"
-              navItems={[
-                { to: ROUTES.teacherDashboard, label: 'Dashboard' },
-                { to: ROUTES.teacherApproval, label: 'Approval' },
-                { to: ROUTES.teacherLibrary, label: 'Library' }
-              ]}
-            />
+            <AuthLayout>
+              <LoginPage />
+            </AuthLayout>
           }
-        >
-          <Route path={ROUTES.teacherDashboard} element={<TeacherDashboardPage />} />
-          <Route path={ROUTES.teacherApproval} element={<TeacherApprovalPage />} />
-          <Route path={ROUTES.teacherLibrary} element={<ResearcherDashboardPage />} />
-        </Route>
-      </Route>
+        />
 
-      <Route element={<ProtectedRoute allowRoles={['admin']} />}>
-        <Route
-          element={
-            <RoleLayout
-              portalLabel="Admin Portal"
-              navItems={[
-                { to: ROUTES.adminDashboard, label: 'Admin Dashboard' },
-                { to: ROUTES.adminResearch, label: 'Research' },
-                {
-                  to: ROUTES.adminUserManagement,
-                  label: 'User Management',
-                  children: [
-                    { to: ROUTES.adminStrands, label: 'Strand' },
-                    { to: ROUTES.adminCategories, label: 'Category' }
-                  ]
-                },
-                { to: ROUTES.adminLibrary, label: 'Library' }
-              ]}
-            />
-          }
-        >
-          <Route path={ROUTES.adminDashboard} element={<AdminDashboardPage />} />
-          <Route path={ROUTES.adminResearch} element={<AdminResearchPage />} />
-          <Route path={ROUTES.adminUserManagement} element={<UserManagementPage />} />
-          <Route path={ROUTES.adminStrands} element={<StrandPage />} />
-          <Route path={ROUTES.adminCategories} element={<CategoryPage />} />
-          <Route path={ROUTES.adminLibrary} element={<ResearcherDashboardPage />} />
+        <Route element={<ProtectedRoute allowRoles={['student']} />}>
+          <Route element={<StudentLayout />}>
+            <Route path={ROUTES.studentDashboard} element={<StudentDashboardPage />} />
+            <Route path={ROUTES.studentSubmit} element={<NewResearchPage />} />
+            <Route path="/student/progress" element={<ProgressPage />} />
+            <Route path="/student/research/:id" element={<ResearchWorkspace />} />
+            <Route path={ROUTES.studentLibrary} element={<ResearcherDashboardPage />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route element={<ProtectedRoute allowRoles={['researcher']} />}>
-        <Route
-          element={
-            <RoleLayout
-              portalLabel="Researcher Portal"
-              navItems={[
-                { to: ROUTES.researcherDashboard, label: 'Dashboard' },
-                { to: ROUTES.researcherLibrary, label: 'Library' }
-              ]}
-            />
-          }
-        >
-          <Route path={ROUTES.researcherDashboard} element={<ResearcherOverviewPage />} />
-          <Route path={ROUTES.researcherLibrary} element={<ResearcherDashboardPage />} />
+        <Route element={<ProtectedRoute allowRoles={['teacher']} />}>
+          <Route
+            element={
+              <RoleLayout
+                portalLabel="Teacher Portal"
+                navItems={[
+                  { to: ROUTES.teacherDashboard, label: 'Dashboard' },
+                  { to: ROUTES.teacherApproval, label: 'Approval' },
+                  { to: '/teacher/students', label: 'Assigned Students' },
+                  { to: '/teacher/progress', label: 'Progress Reports' },
+                  { to: '/teacher/deadlines', label: 'Deadlines' },
+                  { to: ROUTES.teacherLibrary, label: 'Library' }
+                ]}
+              />
+            }
+          >
+            <Route path={ROUTES.teacherDashboard} element={<ProgressPage />} />
+            <Route path={ROUTES.teacherApproval} element={<ProgressPage />} />
+            <Route path="/teacher/students" element={<AssignmentsPage />} />
+            <Route path="/teacher/progress" element={<ProgressPage />} />
+            <Route path="/teacher/deadlines" element={<ProgressPage deadlinesOnly />} />
+            <Route path="/teacher/research/:id" element={<ResearchWorkspace />} />
+            <Route path={ROUTES.teacherLibrary} element={<ResearcherDashboardPage />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route
-        path="*"
-        element={<Navigate to={user ? defaultDashboardRoute : ROUTES.login} replace />}
-      />
-    </Routes>
+        <Route element={<ProtectedRoute allowRoles={['admin']} />}>
+          <Route
+            element={
+              <RoleLayout
+                portalLabel="Admin Portal"
+                navItems={[
+                  { to: ROUTES.adminDashboard, label: 'Admin Dashboard' },
+                  { to: ROUTES.adminResearch, label: 'Research' },
+                  { to: '/admin/assignments', label: 'Teacher Assignments' },
+                  { to: '/admin/progress', label: 'Progress Reports' },
+                  { to: '/admin/reports', label: 'Reports' },
+                  { to: '/admin/publications', label: 'Public Previews' },
+                  {
+                    to: ROUTES.adminUserManagement,
+                    label: 'User Management',
+                    children: [
+                      { to: ROUTES.adminStrands, label: 'Strand' },
+                      { to: ROUTES.adminCategories, label: 'Category' }
+                    ]
+                  },
+                  { to: ROUTES.adminLibrary, label: 'Library' }
+                ]}
+              />
+            }
+          >
+            <Route path={ROUTES.adminDashboard} element={<AdminDashboardPage />} />
+            <Route path={ROUTES.adminResearch} element={<AdminResearchPage />} />
+            <Route path="/admin/assignments" element={<AssignmentsPage />} />
+            <Route path="/admin/progress" element={<ProgressPage />} />
+            <Route path="/admin/reports" element={<ReportsPage />} />
+            <Route path="/admin/publications" element={<PublicationsPage />} />
+            <Route path="/admin/research/:id" element={<ResearchWorkspace />} />
+            <Route path={ROUTES.adminUserManagement} element={<UserManagementPage />} />
+            <Route path={ROUTES.adminStrands} element={<StrandPage />} />
+            <Route path={ROUTES.adminCategories} element={<CategoryPage />} />
+            <Route path={ROUTES.adminLibrary} element={<ResearcherDashboardPage />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowRoles={['researcher']} />}>
+          <Route
+            element={
+              <RoleLayout
+                portalLabel="Researcher Portal"
+                navItems={[
+                  { to: ROUTES.researcherDashboard, label: 'Dashboard' },
+                  { to: ROUTES.researcherLibrary, label: 'Library' }
+                ]}
+              />
+            }
+          >
+            <Route path={ROUTES.researcherDashboard} element={<ResearcherOverviewPage />} />
+            <Route path={ROUTES.researcherLibrary} element={<ResearcherDashboardPage />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

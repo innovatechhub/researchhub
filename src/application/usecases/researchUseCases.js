@@ -1,4 +1,5 @@
 import { mapResearchEntity } from '../../domain/entities/research';
+import { rpc } from '../../infrastructure/repositories/workflowRepository';
 import {
   addResearchCommentRepository,
   getResearchFileDownloadUrlRepository,
@@ -43,7 +44,9 @@ function ensureSupportedDocument(file) {
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ];
-  const hasAllowedExtension = allowedExtensions.some((extension) => normalizedName.endsWith(extension));
+  const hasAllowedExtension = allowedExtensions.some((extension) =>
+    normalizedName.endsWith(extension)
+  );
   const hasAllowedMimeType = allowedMimeTypes.includes(normalizedType);
 
   if (!hasAllowedExtension && !hasAllowedMimeType) {
@@ -123,7 +126,13 @@ export async function listAllResearchesUseCase() {
   return rawResearchList.map(mapResearchEntity);
 }
 
-export async function reviewResearchUseCase({ teacherId, researchId, comment, suggestion, status }) {
+export async function reviewResearchUseCase({
+  teacherId,
+  researchId,
+  comment,
+  suggestion,
+  status
+}) {
   const normalizedComment = comment?.trim() ?? '';
   const normalizedSuggestion = suggestion?.trim() ?? '';
 
@@ -147,19 +156,12 @@ export async function reviewResearchUseCase({ teacherId, researchId, comment, su
     throw new Error('Comment is required for reject/request edits actions.');
   }
 
-  if (normalizedComment || normalizedSuggestion) {
-    await addResearchCommentRepository({
-      researchId,
-      authorId: teacherId,
-      comment: normalizedComment || 'No additional comment provided.',
-      suggestion: normalizedSuggestion || null
-    });
-  }
-
-  if (status) {
-    const rawResearch = await updateResearchStatusRepository({ researchId, status });
-    return mapResearchEntity(rawResearch);
-  }
+  await rpc('workflow_research_review', {
+    p_research: researchId,
+    p_status: status || null,
+    p_comment: normalizedComment,
+    p_suggestion: normalizedSuggestion
+  });
 
   return null;
 }

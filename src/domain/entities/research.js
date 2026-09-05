@@ -2,6 +2,8 @@ export function mapResearchEntity(rawResearch) {
   return {
     id: rawResearch.id,
     studentId: rawResearch.student_id,
+    teacherId: rawResearch.teacher_id,
+    workflowEnabled: rawResearch.workflow_enabled,
     title: rawResearch.title,
     abstract: rawResearch.abstract,
     authors: rawResearch.authors ?? [],
