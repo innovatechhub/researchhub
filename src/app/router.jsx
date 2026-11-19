@@ -9,10 +9,20 @@ import { ProtectedRoute } from '../presentation/routes/ProtectedRoute';
 import { PublicLayout } from '../presentation/layouts/PublicLayout';
 import { HomePage, BrowsePage, InformationPage } from '../presentation/pages/public/PublicPages';
 const page = (load, name) => lazy(() => load().then((module) => ({ default: module[name] })));
-const StudentDashboardPage = page(
-  () => import('../presentation/pages/student/DashboardPage'),
-  'DashboardPage'
+const StudentHomePage = page(
+  () => import('../presentation/pages/student/StudentHomePage'),
+  'StudentHomePage'
 );
+const ReviewQueuePage = page(
+  () => import('../presentation/pages/teacher/ReviewQueuePage'),
+  'ReviewQueuePage'
+);
+const NotificationsPage = page(
+  () => import('../presentation/pages/common/AccountPages'),
+  'NotificationsPage'
+);
+const ProfilePage = page(() => import('../presentation/pages/common/AccountPages'), 'ProfilePage');
+const HelpPage = page(() => import('../presentation/pages/common/AccountPages'), 'HelpPage');
 const AdminDashboardPage = page(
   () => import('../presentation/pages/admin/DashboardPage'),
   'AdminDashboardPage'
@@ -85,7 +95,10 @@ export function AppRouter() {
 
         <Route element={<ProtectedRoute allowRoles={['student']} />}>
           <Route element={<StudentLayout />}>
-            <Route path={ROUTES.studentDashboard} element={<StudentDashboardPage />} />
+            <Route path={ROUTES.studentDashboard} element={<StudentHomePage />} />
+            <Route path="/student/notifications" element={<NotificationsPage />} />
+            <Route path="/student/profile" element={<ProfilePage />} />
+            <Route path="/student/help" element={<HelpPage />} />
             <Route path={ROUTES.studentSubmit} element={<NewResearchPage />} />
             <Route path="/student/progress" element={<ProgressPage />} />
             <Route path="/student/research/:id" element={<ResearchWorkspace />} />
@@ -100,17 +113,23 @@ export function AppRouter() {
                 portalLabel="Teacher Portal"
                 navItems={[
                   { to: ROUTES.teacherDashboard, label: 'Dashboard' },
-                  { to: ROUTES.teacherApproval, label: 'Approval' },
-                  { to: '/teacher/students', label: 'Assigned Students' },
-                  { to: '/teacher/progress', label: 'Progress Reports' },
-                  { to: '/teacher/deadlines', label: 'Deadlines' },
-                  { to: ROUTES.teacherLibrary, label: 'Library' }
+                  { to: ROUTES.teacherApproval, label: 'Review Queue' },
+                  { to: '/teacher/deadlines', label: 'Manage Research' },
+                  { to: '/teacher/students', label: 'Students' },
+                  { to: '/teacher/progress', label: 'Reports' },
+                  { to: '/teacher/settings', label: 'Settings' },
+                  { to: '/teacher/help', label: 'Help & Support' }
                 ]}
               />
             }
           >
-            <Route path={ROUTES.teacherDashboard} element={<ProgressPage />} />
-            <Route path={ROUTES.teacherApproval} element={<ProgressPage />} />
+            <Route path={ROUTES.teacherDashboard} element={<ReviewQueuePage />} />
+            <Route
+              path={ROUTES.teacherApproval}
+              element={<ReviewQueuePage initialFilter="submitted" />}
+            />
+            <Route path="/teacher/settings" element={<ProfilePage />} />
+            <Route path="/teacher/help" element={<HelpPage />} />
             <Route path="/teacher/students" element={<AssignmentsPage />} />
             <Route path="/teacher/progress" element={<ProgressPage />} />
             <Route path="/teacher/deadlines" element={<ProgressPage deadlinesOnly />} />

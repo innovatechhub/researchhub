@@ -1,0 +1,211 @@
+/* Portal (student / teacher / admin) look from the DOMA-TECH mockups.
+   Everything is scoped to .portal-shell so the public site keeps its own styling. */
+.portal-shell {
+  --portal-bg: #f4f7fd;
+  --portal-line: #d6e0f3;
+  --portal-ink: #0c2552;
+  --portal-muted: #5b6b8c;
+  --tone-pending-bg: #fef3d8;
+  --tone-pending-fg: #a15c07;
+  --tone-revision-bg: #fde4e4;
+  --tone-revision-fg: #b42323;
+  --tone-approved-bg: #dcf5e4;
+  --tone-approved-fg: #17703a;
+  --tone-info-bg: #dbe8fb;
+  --tone-info-fg: #1d438a;
+  --tone-idle-bg: #e8edf6;
+  --tone-idle-fg: #50607f;
+  background: var(--portal-bg);
+}
+.portal-shell :where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid #2f5aa8;
+  outline-offset: 2px;
+}
+.portal-shell .workspace-panel {
+  border-color: var(--portal-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(8, 38, 77, 0.06);
+}
+.portal-shell .workspace-heading {
+  color: var(--portal-ink);
+}
+.portal-shell .workspace-input {
+  border-color: #bccbe6;
+}
+.portal-shell .button-navy {
+  background: var(--portal-ink);
+}
+.portal-shell .progress-track > div {
+  background: #2f5aa8;
+}
+.portal-shell .chapter-tab {
+  border-color: var(--portal-line);
+  border-radius: 12px;
+  background: #fff;
+}
+.portal-shell .chapter-tab.selected {
+  background: #e4ecfa;
+  border-color: #2f5aa8;
+}
+.portal-shell .notice {
+  background: #e4ecfa;
+  color: #12326b;
+}
+.portal-shell .error-notice {
+  background: #fff1f2;
+  color: #9f1239;
+}
+.portal-shell .report-table th {
+  background: #eef3fb;
+  color: var(--portal-muted);
+}
+.portal-shell .report-table th,
+.portal-shell .report-table td {
+  border-bottom-color: var(--portal-line);
+}
+.portal-shell .chapter-content {
+  background: #f8faff;
+  border-color: var(--portal-line);
+}
+
+/* Status badges: one palette for chapter, research and queue states. */
+.portal-shell .status-pill {
+  font-weight: 600;
+  background: var(--tone-idle-bg);
+  color: var(--tone-idle-fg);
+}
+.portal-shell .status-submitted,
+.portal-shell .status-pending {
+  background: var(--tone-pending-bg);
+  color: var(--tone-pending-fg);
+}
+.portal-shell .status-needs_revision,
+.portal-shell .status-rejected,
+.portal-shell .status-revision {
+  background: var(--tone-revision-bg);
+  color: var(--tone-revision-fg);
+}
+.portal-shell .status-approved {
+  background: var(--tone-approved-bg);
+  color: var(--tone-approved-fg);
+}
+.portal-shell .status-open {
+  background: var(--tone-approved-bg);
+  color: var(--tone-approved-fg);
+}
+.portal-shell .status-draft,
+.portal-shell .status-none {
+  background: var(--tone-idle-bg);
+  color: var(--tone-idle-fg);
+}
+
+/* Panels used by the dashboards. */
+.card-pane {
+  background: #fff;
+  border: 1px solid var(--portal-line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.card-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--portal-ink);
+  color: #fff;
+  font-weight: 700;
+}
+.correction-card,
+.remark-card,
+.approved-card {
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.correction-card {
+  background: #fde8e8;
+  border: 1px solid #f3b5b5;
+}
+.remark-card {
+  background: #e4ecfa;
+  border: 1px solid #b9ccef;
+}
+.approved-card {
+  background: #e3f6ea;
+  border: 1px solid #a9deba;
+}
+.queue-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--portal-line);
+  border-left: 4px solid transparent;
+  background: #fff;
+}
+.queue-item:hover {
+  background: #f4f7fd;
+}
+.queue-item[aria-current='true'] {
+  background: #e4ecfa;
+  border-left-color: #2f5aa8;
+}
+.kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+.kpi-total {
+  background: #e4ecfa;
+  border-color: #cfdcf5;
+}
+.kpi-pending {
+  background: #fff3dc;
+  border-color: #f5dba5;
+}
+.kpi-revision {
+  background: #fde8e8;
+  border-color: #f3b5b5;
+}
+.kpi-approved {
+  background: #e3f6ea;
+  border-color: #a9deba;
+}
+.kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 22px;
+}
+.dash-split {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 340px minmax(0, 1fr);
+  align-items: start;
+}
+.dash-detail {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+}
+.dash-columns {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .dash-split,
+  .dash-detail,
+  .dash-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -20,11 +20,14 @@ export async function createDatabase() {
  grant all on storage.objects to authenticated;
  insert into strands(name) values('STEM');insert into research_categories(name) values('Applied Research');
  `);
-  await db.exec(
-    await readFile(
-      new URL('../supabase/migrations/202609050001_research_workflow.sql', import.meta.url),
-      'utf8'
-    )
-  );
+  for (const file of [
+    '202609050001_research_workflow.sql',
+    '202609050002_research_resubmit.sql',
+    '202609050003_activity_log.sql',
+    '202609050004_review_sections.sql'
+  ])
+    await db.exec(
+      await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8')
+    );
   return db;
 }

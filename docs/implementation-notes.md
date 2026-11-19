@@ -28,6 +28,10 @@ Place the original school photo in `public/brand/bnhs-campus.jpg` and set the fi
 7. Enable Supabase Cron, then apply `supabase/enable_deadline_reminders.sql`. It calls `workflow_reminders()` every 15 minutes and deduplicates events by chapter/deadline version. Check execution history in the project. The setup follows the [Supabase Cron quickstart](https://supabase.com/docs/guides/cron/quickstart).
 8. Repeat the verified migration/deployment sequence for production after the pilot. Vercel route rewrites are included, but no deployment is performed by this code change.
 
+**Portal redesign (DOMA-TECH mockups)**
+
+Teacher and student dashboards, the portal sidebar/header and the navy theme follow the DOMA-TECH mockups. Apply `supabase/migrations/202609050004_review_sections.sql` (after 001–003) before deploying this UI: it adds optional `section` and `severity` columns to `chapter_reviews`, extends `workflow_review` with two defaulted arguments, and adds `revision_count` to `workflow_progress`. Without it, saving a correction from the teacher dashboard fails. Chapter feedback is shown as one thread across all versions, so earlier comments stay visible after a resubmission. Section text on the dashboards is split from the chapter text when a section title appears alone on a line; otherwise the full chapter text is available under "Read the full chapter text". The older `student/DashboardPage.jsx`, `teacher/DashboardPage.jsx` and `teacher/Approval.jsx` are no longer routed.
+
 **Document processing and review behavior**
 
 Upload the original manuscript first; its private object and processing job are recorded before parsing. DOCX text extraction runs in a browser Web Worker. PDF.js uses its worker to extract text and preserves physical page boundaries for scanned files. Processing is initiated by the signed-in student; keep the tab open during extraction. A persisted queued/failed/interrupted job can be retried from the manuscript list, up to three attempts, or the student can upload a replacement. This is a browser-worker implementation, not an always-running server extraction service.

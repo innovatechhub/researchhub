@@ -105,9 +105,14 @@ export function ProgressPage({ deadlinesOnly = false }) {
             Export CSV
           </button>
           {role === 'student' && (
-            <Link className="button button-navy" to="/student/submit">
-              New research
-            </Link>
+            <>
+              <Link className="button button-outline" to="/student/library">
+                Browse library
+              </Link>
+              <Link className="button button-navy" to="/student/submit">
+                New research
+              </Link>
+            </>
           )}
         </div>
       </div>

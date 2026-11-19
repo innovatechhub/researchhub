@@ -7,7 +7,8 @@ import { useAuth } from '../../../app/providers/AuthProvider';
 export function NewResearchPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const [reused, setReused] = useState(false);
   const [options, setOptions] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -50,6 +51,31 @@ export function NewResearchPage() {
       strand: f.strand || profile.track || ''
     }));
   }, [profile]);
+  // Students enter their details once: a new research starts from their latest one, and only
+  // the title and abstract are left blank.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let live = true;
+    rows('researches', (q) =>
+      q.eq('student_id', user.id).order('created_at', { ascending: false }).limit(1)
+    )
+      .then(([last]) => {
+        if (!live || !last) return;
+        setReused(true);
+        setForm((f) => ({
+          ...f,
+          authors: f.authors || (last.authors || []).join(', '),
+          keywords: f.keywords || (last.keywords || []).join(', '),
+          strand: f.strand || last.strand || '',
+          category: f.category || last.category || '',
+          teacher: f.teacher || last.teacher_id || ''
+        }));
+      })
+      .catch(() => {}); // Pre-filling is a convenience; the form still works without it.
+    return () => {
+      live = false;
+    };
+  }, [user?.id]);
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -97,6 +123,13 @@ export function NewResearchPage() {
             Retry
           </button>
         </div>
+      )}
+      {reused && (
+        <p className="notice">
+          We filled in your details from your previous research. Add the new title and abstract, and
+          change anything that is different. To send a revision of research you already submitted,
+          open it from My Research instead.
+        </p>
       )}
       {options && !options.teachers.length && (
         <p className="notice">

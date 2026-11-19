@@ -5,7 +5,11 @@ import {
   completion,
   schoolToUTC,
   schoolInput,
-  csvCell
+  csvCell,
+  splitSections,
+  chapterFeedback,
+  feedbackKind,
+  SECTION_TITLES
 } from '../src/domain/chapters.mjs';
 const body = 'This is substantive research body text. '.repeat(8);
 describe('chapter detection', () => {
@@ -65,5 +69,45 @@ describe('report semantics', () => {
   it('escapes report cells and spreadsheet formulas', () => {
     expect(csvCell('=SUM(A1)')).toBe('"\'=SUM(A1)"');
     expect(csvCell('a,"b"')).toBe('"a,""b"""');
+  });
+});
+
+describe('sections and feedback history', () => {
+  it('splits chapter text by section headings and leaves missing headings null', () => {
+    const text = [
+      'Background of the Study',
+      'Study habits matter.',
+      '2. Statement of the Problem:',
+      'What is the effect?'
+    ].join('\n');
+    const result = splitSections(text, SECTION_TITLES[1]);
+    expect(result[0]).toEqual({
+      title: 'Background of the Study',
+      content: 'Study habits matter.'
+    });
+    expect(result[1].content).toBe('What is the effect?');
+    expect(result[2].content).toBeNull();
+  });
+  it('keeps feedback from earlier versions, newest first, labelled by version', () => {
+    const versions = [
+      { id: 'v1', chapter_id: 'c1', version_number: 1 },
+      { id: 'v2', chapter_id: 'c1', version_number: 2 },
+      { id: 'x', chapter_id: 'c2', version_number: 1 }
+    ];
+    const reviews = [
+      { id: 'a', version_id: 'v1', created_at: '2026-11-12T01:00:00Z' },
+      { id: 'b', version_id: 'v2', created_at: '2026-11-14T01:00:00Z' },
+      { id: 'c', version_id: 'x', created_at: '2026-11-15T01:00:00Z' }
+    ];
+    expect(chapterFeedback(reviews, versions, 'c1').map((r) => [r.id, r.version_number])).toEqual([
+      ['b', 2],
+      ['a', 1]
+    ]);
+  });
+  it('classifies corrections, remarks and approvals', () => {
+    expect(feedbackKind({ decision: 'needs_revision' })).toBe('correction');
+    expect(feedbackKind({ decision: 'feedback', severity: 'major' })).toBe('correction');
+    expect(feedbackKind({ decision: 'feedback', severity: null })).toBe('remark');
+    expect(feedbackKind({ decision: 'approved' })).toBe('approved');
   });
 });

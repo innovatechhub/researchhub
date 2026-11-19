@@ -121,6 +121,25 @@ it('persists extraction and submits versioned chapters without publishing the so
   expect((await db.query('select * from chapter_versions')).rows).toHaveLength(0);
   expect((await db.query('select * from storage.objects')).rows).toHaveLength(0);
 });
+it('stores the section and severity of a review, validates them, and shows them to the student', async () => {
+  await login('teacher');
+  const [v] = (await db.query('select * from chapter_versions order by created_at limit 1')).rows;
+  await expect(
+    rpc('workflow_review', v.id, 'feedback', 'Fix this', 'Background of the Study', 'huge')
+  ).rejects.toThrow('Invalid severity');
+  await rpc('workflow_review', v.id, 'feedback', 'Fix this', 'Background of the Study', 'major');
+  // The original three-argument call still works and stores no section or severity.
+  await rpc('workflow_review', v.id, 'feedback', 'General note');
+  expect((await rpc('workflow_progress'))[0].revision_count).toBe(0);
+  await login('student');
+  const rows = (
+    await db.query('select comment,section,severity from chapter_reviews order by created_at')
+  ).rows;
+  expect(rows).toEqual([
+    { comment: 'Fix this', section: 'Background of the Study', severity: 'major' },
+    { comment: 'General note', section: null, severity: null }
+  ]);
+});
 it('requires all chapters approved, keeps submitted work out of overdue totals, and deduplicates reminders', async () => {
   await login('teacher');
   await expect(rpc('workflow_publish', rid, doc)).rejects.toThrow('All required chapters');

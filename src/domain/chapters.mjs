@@ -110,3 +110,88 @@ export function csvCell(value) {
   const text = String(value ?? '');
   return `"${(/^[=+@\-\t\r]/.test(text) ? "'" : '') + text.replaceAll('"', '""')}"`;
 }
+// Standard sections per chapter position. Teachers tag corrections with one of these.
+export const SECTION_TITLES = {
+  1: [
+    'Background of the Study',
+    'Statement of the Problem',
+    'Objectives of the Study',
+    'Significance of the Study',
+    'Scope and Delimitation'
+  ],
+  2: [
+    'Related Literature',
+    'Related Studies',
+    'Synthesis of the Reviewed Literature',
+    'Conceptual Framework'
+  ],
+  3: [
+    'Research Design',
+    'Respondents of the Study',
+    'Research Instrument',
+    'Data Gathering Procedure',
+    'Statistical Treatment of Data'
+  ],
+  4: ['Presentation of Data', 'Analysis of Data', 'Interpretation of Results'],
+  5: ['Summary of Findings', 'Conclusions', 'Recommendations']
+};
+const normalizeHeading = (text) =>
+  text
+    .toLowerCase()
+    .replace(/^\s*(\d+|[ivx]+)[.):\-\s]+/, '')
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+// Splits chapter text into sections when a section title appears alone on a line. A section whose
+// heading is not found has content null, so callers can fall back to the whole chapter.
+export function splitSections(content, titles = []) {
+  const lines = String(content || '').split(/\r?\n/);
+  const heads = [];
+  titles.forEach((title) => {
+    const wanted = normalizeHeading(title);
+    const at = lines.findIndex(
+      (line, i) =>
+        line.trim().length <= 120 &&
+        normalizeHeading(line) === wanted &&
+        !heads.some((h) => h.line === i)
+    );
+    if (at >= 0) heads.push({ title, line: at });
+  });
+  heads.sort((a, b) => a.line - b.line);
+  return titles.map((title) => {
+    const index = heads.findIndex((h) => h.title === title);
+    if (index < 0) return { title, content: null };
+    const end = heads[index + 1]?.line ?? lines.length;
+    return {
+      title,
+      content: lines
+        .slice(heads[index].line + 1, end)
+        .join('\n')
+        .trim()
+    };
+  });
+}
+// All reviews for a chapter across every version, newest first, each labelled with its version.
+// Earlier feedback stays visible after the student submits a new version.
+export function chapterFeedback(reviews, versions, chapterId) {
+  const byVersion = new Map(
+    versions.filter((v) => v.chapter_id === chapterId).map((v) => [v.id, v])
+  );
+  return reviews
+    .filter((r) => byVersion.has(r.version_id))
+    .map((r) => ({ ...r, version_number: byVersion.get(r.version_id).version_number }))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+// Correction = a revision request or any tagged-severity feedback; Remark = plain feedback.
+export function feedbackKind(review) {
+  if (review.decision === 'approved') return 'approved';
+  return review.decision === 'needs_revision' || review.severity ? 'correction' : 'remark';
+}
+export const STATUS_LABELS = {
+  draft: 'Draft',
+  submitted: 'Pending Review',
+  needs_revision: 'For Revision',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  none: 'Not Yet Submitted'
+};
