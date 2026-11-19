@@ -73,9 +73,9 @@ export function SubmittedFile({ document, label }) {
     );
   const ext = document.format.toUpperCase();
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl bg-slate-50 p-5 text-center">
-      <FiFileText aria-hidden="true" className="h-14 w-14 text-navy-500" />
-      <p className="text-sm font-semibold text-slate-800">
+    <div className="submitted-file flex min-w-0 flex-col items-center gap-2 rounded-xl bg-slate-50 p-4 text-center">
+      <FiFileText aria-hidden="true" className="h-12 w-12 shrink-0 text-navy-500" />
+      <p className="max-w-full break-words text-sm font-semibold text-slate-800">
         {label}.{document.format}
       </p>
       <p className="text-xs text-slate-500">
@@ -114,6 +114,7 @@ export function ChapterReviewPanel({
   nameOf,
   contentHeading,
   onSectionChange,
+  selectedSection,
   children
 }) {
   const titles = sectionTitlesFor(chapter);
@@ -137,6 +138,9 @@ export function ChapterReviewPanel({
   useEffect(() => {
     onSectionChange?.(open);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (selectedSection != null) setOpen(selectedSection);
+  }, [selectedSection]);
 
   const rows = [
     ...titles.map((title, i) => ({
@@ -161,78 +165,97 @@ export function ChapterReviewPanel({
     );
 
   return (
-    <div className="space-y-4">
+    <div className="chapter-review-panel min-w-0 space-y-2">
       <div className="card-pane-head rounded-xl">
         <FiFileText aria-hidden="true" />
         Chapter {chapter.position} – {chapter.title}
         <StatusBadge status={version.status} className="ml-auto" />
       </div>
-      {rows.map((row) => {
-        const isOpen = open === row.key;
-        const mine = notesFor(row.key);
-        return (
-          <section key={row.key || 'general'} className="card-pane">
-            <button
-              type="button"
-              aria-expanded={isOpen}
-              className="flex w-full items-center gap-3 bg-navy-100 px-4 py-3 text-left font-bold text-navy-900"
-              onClick={() => setOpen(isOpen ? null : row.key)}
-            >
-              <FiFileText aria-hidden="true" />
-              <span className="flex-1">
-                {row.index ? `${row.index}. ` : ''}
-                {row.title}
-              </span>
-              {mine.length > 0 && (
-                <span className="status-pill status-needs_revision">
-                  {mine.length} {mine.length === 1 ? 'note' : 'notes'}
+      <div
+        className="chapter-review-scroll"
+        role="region"
+        aria-label="Chapter sections and corrections"
+        tabIndex={0}
+      >
+        {rows.map((row) => {
+          const isOpen = open === row.key;
+          const mine = notesFor(row.key);
+          return (
+            <section key={row.key || 'general'} className="card-pane">
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                className="section-toggle flex w-full items-center gap-3 bg-navy-100 px-3 py-2.5 text-left font-bold text-navy-900"
+                onClick={() => setOpen(isOpen && !children ? null : row.key)}
+              >
+                <FiFileText aria-hidden="true" />
+                <span className="flex-1">
+                  {row.index ? `${row.index}. ` : ''}
+                  {row.title}
                 </span>
+                {mine.length > 0 && (
+                  <span className="status-pill status-needs_revision">
+                    {mine.length} {mine.length === 1 ? 'note' : 'notes'}
+                  </span>
+                )}
+                {isOpen ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
+              </button>
+              {isOpen && (
+                <div className="dash-columns p-3">
+                  <div className="min-w-0 space-y-3">
+                    <h3 className="flex items-center gap-2 font-bold text-slate-800">
+                      <FiFileText aria-hidden="true" /> {contentHeading || 'Submitted content'}
+                    </h3>
+                    {row.key === GENERAL ? (
+                      <>
+                        {version.content && (
+                          <div className="chapter-content section-content">{version.content}</div>
+                        )}
+                        <SubmittedFile document={document} label={fileLabel} />
+                      </>
+                    ) : row.content ? (
+                      <div className="chapter-content section-content">{row.content}</div>
+                    ) : (
+                      <p className="notice">
+                        This manuscript does not have separate text for this section. Open the full
+                        chapter text below or download the original manuscript.
+                      </p>
+                    )}
+                    {row.key !== GENERAL && <SubmittedFile document={document} label={fileLabel} />}
+                  </div>
+                  <div className="corrections-panel min-w-0 space-y-3">
+                    <h3 className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 font-bold text-slate-800">
+                      <FiMessageSquare aria-hidden="true" /> Teacher&apos;s Corrections
+                    </h3>
+                    <div
+                      className="feedback-scroll"
+                      role="region"
+                      aria-label="Teacher feedback history"
+                      tabIndex={0}
+                    >
+                      <FeedbackThread
+                        reviews={mine}
+                        nameOf={nameOf}
+                        empty="No corrections for this section yet."
+                      />
+                    </div>
+                    {children}
+                  </div>
+                </div>
               )}
-              {isOpen ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
-            </button>
-            {isOpen && (
-              <div className="dash-columns p-4">
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-2 font-bold text-slate-800">
-                    <FiFileText aria-hidden="true" /> {contentHeading || 'Submitted content'}
-                  </h3>
-                  {row.key === GENERAL ? (
-                    <SubmittedFile document={document} label={fileLabel} />
-                  ) : row.content ? (
-                    <div className="chapter-content !max-h-72">{row.content}</div>
-                  ) : (
-                    <p className="notice">
-                      This section heading was not found in the chapter text. Read the full chapter
-                      below or open the manuscript.
-                    </p>
-                  )}
-                  {row.key !== GENERAL && <SubmittedFile document={document} label={fileLabel} />}
-                </div>
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 font-bold text-slate-800">
-                    <FiMessageSquare aria-hidden="true" /> Teacher&apos;s Corrections
-                  </h3>
-                  <FeedbackThread
-                    reviews={mine}
-                    nameOf={nameOf}
-                    empty="No corrections for this section yet."
-                  />
-                </div>
-              </div>
-            )}
-          </section>
-        );
-      })}
-      <details className="card-pane">
-        <summary className="cursor-pointer bg-navy-50 px-4 py-3 font-semibold text-navy-900">
-          Read the full chapter text
-        </summary>
-        <div className="chapter-content m-4">
-          {version.content ||
-            'This chapter uses scanned pages. Open the original manuscript to read it.'}
-        </div>
-      </details>
-      {children}
+            </section>
+          );
+        })}
+        <details className="card-pane">
+          <summary className="cursor-pointer bg-navy-50 px-4 py-3 font-semibold text-navy-900">
+            Read the full chapter text
+          </summary>
+          <div className="chapter-content m-4">
+            {version.content ||
+              'This chapter uses scanned pages. Open the original manuscript to read it.'}
+          </div>
+        </details>
+      </div>
     </div>
   );
 }

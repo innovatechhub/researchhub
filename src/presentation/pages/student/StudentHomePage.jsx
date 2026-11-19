@@ -76,17 +76,17 @@ export function StudentHomePage() {
     );
 
   return (
-    <div className="space-y-5">
-      <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-[#cfdcf5] bg-navy-100 px-6 py-5">
+    <div className="student-dashboard space-y-4">
+      <section className="student-welcome flex flex-wrap items-center gap-4 rounded-2xl border border-[#cfdcf5] bg-navy-100 px-5 py-4">
         <FiBookOpen aria-hidden="true" className="h-12 w-12 text-navy-800" />
-        <div className="min-w-[220px] flex-1">
+        <div className="min-w-0 flex-1 basis-56">
           <h1 className="text-2xl font-extrabold text-navy-900">Hello, {first}!</h1>
           <p className="text-sm text-slate-700">
             Track your research submissions and view teacher corrections here.
           </p>
         </div>
         {research && (
-          <div className="min-w-[220px] border-l border-navy-300 pl-5">
+          <div className="student-research-title min-w-0 flex-1 basis-56 border-l border-navy-300 pl-5">
             <p className="text-sm font-bold text-navy-900">Research Title:</p>
             {records.length > 1 ? (
               <select
@@ -135,7 +135,7 @@ export function StudentHomePage() {
         </section>
       ) : (
         <>
-          <div className="dash-detail" style={{ gridTemplateColumns: '300px minmax(0, 1fr)' }}>
+          <div className="dash-detail student-chapter-layout">
             <section className="card-pane" aria-label="Research Chapters">
               <div className="card-pane-head">
                 <FiBookOpen aria-hidden="true" /> Research Chapters

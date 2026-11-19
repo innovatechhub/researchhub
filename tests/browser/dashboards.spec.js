@@ -180,6 +180,7 @@ test('teacher searches the review queue and saves a correction with a section', 
     await expect(page.getByText('Total Submissions')).toBeVisible();
     const queue = page.getByRole('region', { name: 'My Review Queue' });
     await expect(queue.getByRole('button')).toHaveCount(3 + 4); // 3 research rows + 4 filter chips
+    await expect(page.getByRole('button', { name: /Chapter 1/ })).toBeVisible();
     await snap(page, 'teacher-dashboard');
     await queue.getByPlaceholder(/Search by student name/).fill('social media');
     await expect(queue.getByText('Reyes, Andrea Mae')).toBeVisible();
@@ -188,8 +189,16 @@ test('teacher searches the review queue and saves a correction with a section', 
     await expect(queue.getByText('Dinaque, Lorainne')).toBeVisible();
     // The previous corrections are visible to the teacher too.
     await expect(page.getByText('clearly state the research gap')).toBeVisible();
+    await expect(
+      page.locator('.corrections-panel').getByRole('combobox', { name: 'Section', exact: true })
+    ).toBeVisible();
     await snap(page, 'teacher-detail');
-    await page.getByLabel('Section').selectOption('Statement of the Problem');
+    await page
+      .getByRole('combobox', { name: 'Section', exact: true })
+      .selectOption('Statement of the Problem');
+    await expect(
+      page.getByRole('button', { name: '2. Statement of the Problem', exact: true })
+    ).toHaveAttribute('aria-expanded', 'true');
     await page.getByLabel('Correction', { exact: true }).fill('State the problem as a question.');
     await page.getByRole('button', { name: 'Save Corrections' }).click();
     await expect(page.getByText('Corrections saved.')).toBeVisible();
@@ -205,6 +214,37 @@ test('teacher searches the review queue and saves a correction with a section', 
     await page.goto('/teacher/approval');
     // Review Queue opens filtered to research awaiting review.
     await expect(page.getByRole('button', { name: 'Pending', pressed: true })).toBeVisible();
+  } finally {
+    await page.unrouteAll({ behavior: 'wait' });
+    await db.close();
+  }
+});
+
+test('student chapter content stays readable on phones, tablets and desktop', async ({ page }) => {
+  const db = await backend(page);
+  try {
+    await seed(db);
+    await page.goto('/student/dashboard');
+    await expect(page.getByRole('heading', { name: 'Hello, Lorainne!' })).toBeVisible();
+    for (const width of [375, 390, 768, 1100, 1495]) {
+      await page.setViewportSize({ width, height: 997 });
+      const layout = await page.evaluate(() => {
+        const detail = document.querySelector('.chapter-review-panel').getBoundingClientRect();
+        return {
+          viewport: innerWidth,
+          document: document.documentElement.scrollWidth,
+          detailWidth: detail.width,
+          detailRight: detail.right
+        };
+      });
+      expect(layout.document, `page overflow at ${width}px`).toBeLessThanOrEqual(width);
+      expect(layout.detailWidth, `content squeezed at ${width}px`).toBeGreaterThan(250);
+      expect(layout.detailRight).toBeLessThanOrEqual(width);
+      if (width === 390) await snap(page, 'student-mobile');
+    }
+    await page.getByRole('button', { name: /Chapter 2/ }).click();
+    await expect(page.getByText('Add at least five related studies.')).toBeVisible();
+    await expect(page.getByText('Related literature body.', { exact: true }).first()).toBeVisible();
   } finally {
     await page.unrouteAll({ behavior: 'wait' });
     await db.close();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FiBookOpen,
@@ -60,6 +60,7 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
   const [detailError, setDetailError] = useState('');
   const [tab, setTab] = useState('chapters');
   const [chapterId, setChapterId] = useState('');
+  const detailRequest = useRef(0);
 
   useEffect(() => setFilter(initialFilter), [initialFilter]);
 
@@ -98,25 +99,28 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
   }, [visible, selectedId]);
 
   const loadDetail = useCallback(async (id) => {
-    if (!id) return setData(null);
+    const request = ++detailRequest.current;
+    setData(null);
+    setDetailError('');
+    if (!id) return;
     try {
       const next = await loadWorkspace(id);
+      if (request !== detailRequest.current) return;
       setData(next);
       setDetailError('');
       setChapterId((current) =>
         next.chapters.some((c) => c.id === current) ? current : next.chapters[0]?.id || ''
       );
     } catch (e) {
+      if (request !== detailRequest.current) return;
       setData(null);
       setDetailError(e.message);
     }
   }, []);
   useEffect(() => {
-    let live = true;
-    setData(null);
-    if (selectedId) loadDetail(selectedId).catch(() => live && setData(null));
+    loadDetail(selectedId);
     return () => {
-      live = false;
+      detailRequest.current++;
     };
   }, [selectedId, loadDetail]);
 
@@ -141,7 +145,7 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="teacher-dashboard space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           tone="total"
@@ -264,14 +268,18 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
                   Open full workspace
                 </Link>
               </div>
-              <div role="tablist" className="flex gap-1 border-b border-[#d6e0f3] bg-white px-3">
+              <div
+                role="tablist"
+                aria-label="Research details"
+                className="research-detail-tabs flex gap-1 overflow-x-auto border-b border-[#d6e0f3] bg-white px-3"
+              >
                 {TABS.map(([key, label, Icon]) => (
                   <button
                     key={key}
                     role="tab"
                     type="button"
                     aria-selected={tab === key}
-                    className={`flex items-center gap-2 border-b-[3px] px-4 py-3 text-sm font-semibold ${
+                    className={`flex shrink-0 items-center gap-2 border-b-[3px] px-3 py-3 text-sm font-semibold ${
                       tab === key
                         ? 'border-blue-600 text-blue-700'
                         : 'border-transparent text-slate-600 hover:text-navy-800'
@@ -282,7 +290,7 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
                   </button>
                 ))}
               </div>
-              <div className="p-4">
+              <div className="p-3">
                 {detailError ? (
                   <p className="notice error-notice" role="alert">
                     {detailError}{' '}
@@ -359,7 +367,7 @@ export function ReviewQueuePage({ initialFilter = 'all' }) {
 function ChapterDetail({ data, chapter, fileLabel, nameOf, toast, onSaved }) {
   const version = data.versions.find((v) => v.id === chapter.current_version_id);
   const titles = sectionTitlesFor(chapter);
-  const [section, setSection] = useState('');
+  const [section, setSection] = useState(null);
   const [severity, setSeverity] = useState('major');
   const [correction, setCorrection] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -419,17 +427,18 @@ function ChapterDetail({ data, chapter, fileLabel, nameOf, toast, onSaved }) {
         nameOf={nameOf}
         contentHeading="Submitted File"
         onSectionChange={(s) => setSection(s && titles.includes(s) ? s : '')}
+        selectedSection={section}
       >
         {canReview && (
-          <section className="card-pane">
-            <h3 className="bg-navy-50 px-4 py-3 font-bold text-navy-900">Add Corrections</h3>
-            <div className="space-y-3 p-4">
+          <section className="review-editor border-t border-[#d6e0f3] pt-3">
+            <h3 className="sr-only">Add Corrections</h3>
+            <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="workspace-label">
                   Section
                   <select
                     className="workspace-input mt-1"
-                    value={section}
+                    value={section || ''}
                     onChange={(e) => setSection(e.target.value)}
                   >
                     <option value="">Whole chapter</option>
@@ -456,7 +465,7 @@ function ChapterDetail({ data, chapter, fileLabel, nameOf, toast, onSaved }) {
                 Correction
                 <textarea
                   className="workspace-input mt-1"
-                  rows="3"
+                  rows="2"
                   value={correction}
                   onChange={(e) => setCorrection(e.target.value)}
                   placeholder="What must the student fix?"

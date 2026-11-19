@@ -193,7 +193,9 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
     ) : null;
 
   return (
-    <div className="portal-shell min-h-screen md:grid md:h-screen md:grid-cols-[250px_1fr] md:overflow-hidden">
+    <div
+      className={`portal-shell ${['Teacher Portal', 'Student Portal'].includes(portalLabel) ? 'portal-academic' : ''} min-h-screen md:grid md:h-screen md:grid-cols-[250px_minmax(0,1fr)] md:overflow-hidden`}
+    >
       <aside className="hidden bg-navy-800 text-white md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-hidden">
         <NavLink
           to="/"
@@ -327,37 +329,37 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
         </div>
       ) : null}
 
-      <div className="flex min-h-screen flex-col md:h-screen md:overflow-y-auto">
+      <div className="portal-main min-w-0 flex min-h-screen flex-col md:h-screen md:overflow-y-auto">
         <header className="sticky top-0 z-30 border-b border-[#d6e0f3] bg-white/95 backdrop-blur">
           <div className="flex min-h-[72px] w-full items-center justify-between gap-3 px-4 py-2 sm:px-8">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
                 aria-label="Open navigation menu"
                 onClick={() => setMobileMenuOpen(true)}
               >
                 <FiMenu className="h-5 w-5" />
               </button>
-              <div>
-                <p className="text-2xl font-extrabold leading-tight text-navy-800">
+              <div className="min-w-0">
+                <p className="portal-title text-2xl font-extrabold leading-tight text-navy-800">
                   ResearchHub BNHS
                 </p>
-                <p className="text-sm italic text-blue-700">
+                <p className="portal-subtitle text-sm italic text-blue-700">
                   {portalLabel}
                   {PORTAL_SUBTITLES[portalLabel] ? (
-                    <>
+                    <span className="portal-description">
                       <span aria-hidden="true" className="mx-2 not-italic">
                         •
                       </span>
                       {PORTAL_SUBTITLES[portalLabel]}
-                    </>
+                    </span>
                   ) : null}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <div className="relative" ref={notificationPanelRef}>
                 <button
                   type="button"
