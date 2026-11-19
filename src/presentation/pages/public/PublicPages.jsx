@@ -153,13 +153,57 @@ export function ResearchPreviewList({ browse = false }) {
     </>
   );
 }
-export function HomePage() {
+const SLIDE_MS = 6500;
+
+// Crossfading campus photos behind the hero text. Autoplay is skipped for visitors who prefer
+// reduced motion; the dots always let them pick a photo.
+function HeroSlides({ images }) {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    if (images.length < 2 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+      return undefined;
+    const timer = window.setInterval(() => setActive((i) => (i + 1) % images.length), SLIDE_MS);
+    return () => window.clearInterval(timer);
+  }, [images.length]);
   return (
     <>
-      <section
-        className={`home-hero ${site.heroImage ? 'has-photo' : ''}`}
-        style={site.heroImage ? { '--hero-image': `url("${site.heroImage}")` } : undefined}
-      >
+      <div className="hero-slides" aria-hidden="true">
+        {images.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`hero-slide ${i === active ? 'active' : ''}`}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            fetchPriority={i === 0 ? 'high' : 'auto'}
+            decoding="async"
+          />
+        ))}
+      </div>
+      {images.length > 1 && (
+        <div className="hero-dots" role="group" aria-label="Campus photos">
+          {images.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              className={i === active ? 'active' : ''}
+              aria-label={`Show campus photo ${i + 1} of ${images.length}`}
+              aria-current={i === active}
+              onClick={() => setActive(i)}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function HomePage() {
+  const hasPhotos = site.heroImages.length > 0;
+  return (
+    <>
+      <section className={`home-hero ${hasPhotos ? 'has-photo' : ''}`}>
+        {hasPhotos && <HeroSlides images={site.heroImages} />}
         <div className="site-container hero-inner">
           <div className="hero-copy">
             <p className="eyebrow">KNOWLEDGE TODAY. POSSIBILITIES TOMORROW.</p>
@@ -184,7 +228,7 @@ export function HomePage() {
               </Link>
             </div>
           </div>
-          {!site.heroImage && (
+          {!hasPhotos && (
             <div className="hero-brand-art" aria-hidden="true">
               <div className="hero-orbit" />
               <img src={site.logo} alt="" />

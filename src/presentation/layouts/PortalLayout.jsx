@@ -23,6 +23,7 @@ import {
   markNotificationAsReadUseCase
 } from '../../application/usecases/notificationUseCases';
 import { formatDate } from '../../core/utils/date';
+import { site } from '../../core/config/site';
 
 const PORTAL_SUBTITLES = {
   'Teacher Portal': 'Review and Provide Corrections',
@@ -200,7 +201,7 @@ export function PortalLayout({ portalLabel, navItems = [] }) {
           aria-label="ResearchHub BNHS home"
         >
           <img
-            src="/brand/researchhub-bnhs-logo.jpg"
+            src={site.logo}
             className="mx-auto h-[72px] w-[72px] rounded-full border-2 border-white/30 object-cover"
             alt=""
           />
